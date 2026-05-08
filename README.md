@@ -1,27 +1,53 @@
 # GitHub Unified MCP Frontend
 
-Prototype frontend console for `github-unified-mcp`.
+Frontend console for `github-unified-mcp`.
 
 ## Current state
 
-This repository currently contains the standalone design prototype exported from the original zip.
+This repository now contains two tracks:
 
-Open `Painel MCP.html` locally to view the prototype.
+1. `Painel MCP.html` and the original imported prototype scaffold.
+2. A new Vite + React + TypeScript app under `src/`.
 
-## Structure
+The Vite app is the preferred path forward. The original prototype remains as visual/product reference.
 
-- `Painel MCP.html` — standalone prototype entrypoint
-- `styles.css` — shared styling
-- `data/` — mocked server/tool/schema data
-- `screens/` — React JSX screen prototypes
-- `design-canvas.jsx` and `tweaks-panel.jsx` — design exploration helpers
+## Development
 
-## Next direction
+```bash
+npm install
+npm run dev
+```
 
-Recommended migration path:
+## Build
 
-1. Port the prototype to Vite + React + TypeScript.
-2. Split live and mock data into adapters.
-3. Add a Python/FastAPI admin BFF in the main MCP project.
-4. Consume real `/healthz`, `server_info`, and tool catalog data.
-5. Keep destructive/write operations behind server-side confirmation and audit gates.
+```bash
+npm run build
+```
+
+The build script runs TypeScript project build before Vite production build.
+
+## Architecture
+
+- `src/adapters/mockAdapter.ts` provides offline demo data.
+- `src/adapters/liveMcpAdapter.ts` reads `server_info` from an MCP endpoint.
+- `src/types/mcp.ts` contains shared frontend contracts.
+- Destructive/write operations must not be executed directly from the browser; they should go through a backend BFF with server-side confirmation and audit.
+
+## Original prototype files
+
+Imported from the initial zip:
+
+- `Painel MCP.html`
+- `data/schemas.jsx`
+- `data/server-state.jsx`
+- `data/tools.jsx`
+- `screens/direction-a-drawer.jsx`
+- `screens/direction-b.jsx`
+
+Still pending to port or reimplement from the original prototype:
+
+- `styles.css`
+- `tweaks-panel.jsx`
+- `screens/direction-a.jsx`
+- `screens/direction-a-wizard.jsx`
+- `design-canvas.jsx`
