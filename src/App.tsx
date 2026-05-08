@@ -46,7 +46,7 @@ export function App() {
     const items = snapshot?.tools ?? [];
     return items
       .filter((tool) => risk === 'all' || tool.risk === risk)
-      .sort((a, b) => riskRank[b.risk] - riskRank+a.risk] || a.name.localeCompare(b.name));
+      .sort((a, b) => riskRank[b.risk] - riskRank[a.risk] || a.name.localeCompare(b.name));
   }, [snapshot, risk]);
 
   const highRisk = snapshot?.tools.filter((tool) => tool.risk === 'high').length ?? 0;
