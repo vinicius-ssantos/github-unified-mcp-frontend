@@ -1,0 +1,103 @@
+// Tool catalog — extracted from the README of github-unified-mcp.
+// Grouped by phase. Each tool: name, summary, risk, requiresConfirm, requiresDangerousMode.
+
+const TOOL_CATALOG = [
+  {
+    phase: "Diagnóstico",
+    description: "Endpoints e tools de observabilidade. Nenhum expõe tokens.",
+    tools: [
+      { name: "server_info", summary: "Versão, schema, uptime, flags de configuração", risk: "low" },
+      { name: "github_get_me", summary: "Identidade autenticada no GitHub", risk: "low" },
+      { name: "stack_detect", summary: "Detecta stacks e manifests via árvore Git", risk: "low" },
+      { name: "repo_context_atlas", summary: "Resumo bounded do repositório: stacks, entrypoints, riscos", risk: "low" },
+    ],
+  },
+  {
+    phase: "Read-only — Fase 1",
+    description: "Leitura de repos, issues, PRs e Actions. Sempre seguro.",
+    tools: [
+      { name: "repo_get", summary: "Metadados de um repositório", risk: "low" },
+      { name: "repo_tree", summary: "Árvore de arquivos em um ref", risk: "low" },
+      { name: "file_get", summary: "Conteúdo de um arquivo", risk: "low" },
+      { name: "issue_get", summary: "Issue por número", risk: "low" },
+      { name: "issue_list", summary: "Listagem com filtros", risk: "low" },
+      { name: "pr_get", summary: "PR por número", risk: "low" },
+      { name: "pr_list", summary: "Listagem de PRs", risk: "low" },
+      { name: "actions_list_runs", summary: "Workflow runs recentes", risk: "low" },
+      { name: "actions_get_run", summary: "Detalhe de um run", risk: "low" },
+      { name: "actions_get_jobs", summary: "Jobs de um run", risk: "low" },
+      { name: "actions_get_job_logs", summary: "Logs de um job", risk: "low" },
+    ],
+  },
+  {
+    phase: "Escrita segura — Fase 2",
+    description: "Mutações controladas. Exigem read-only=false e respeitam branches protegidas.",
+    tools: [
+      { name: "branch_create", summary: "Cria branch a partir de um ref", risk: "medium" },
+      { name: "file_create_or_update", summary: "Escreve arquivo completo via API", risk: "medium" },
+      { name: "file_apply_patch", summary: "Substitui trechos exatos sem reenviar arquivo", risk: "medium" },
+      { name: "issue_create", summary: "Abre issue (recusa em read-only)", risk: "medium" },
+      { name: "issue_update", summary: "Atualiza issue existente", risk: "medium" },
+      { name: "issue_comment", summary: "Comenta em issue/PR", risk: "medium" },
+      { name: "pr_create", summary: "Abre pull request", risk: "medium" },
+      { name: "pr_update", summary: "Atualiza título/corpo/branch base", risk: "medium" },
+      { name: "pr_merge", summary: "Merge — exige confirm + dangerous_tools", risk: "high", requiresConfirm: true, requiresDangerous: true },
+      { name: "actions_run_workflow", summary: "Disparo manual de workflow", risk: "high", requiresWorkflowDispatch: true },
+    ],
+  },
+  {
+    phase: "Git low-level — Fase 3",
+    description: "Operações Git brutas. Preferir fluxo PR-first; usar só quando necessário.",
+    tools: [
+      { name: "git_create_blob", summary: "Cria blob — exige confirm", risk: "high", requiresConfirm: true, requiresDangerous: true },
+      { name: "git_create_tree", summary: "Cria tree — exige confirm", risk: "high", requiresConfirm: true, requiresDangerous: true },
+      { name: "git_create_commit", summary: "Cria commit — exige confirm", risk: "high", requiresConfirm: true, requiresDangerous: true },
+      { name: "git_update_ref", summary: "Atualiza ref — bloqueado em branches protegidas", risk: "high", requiresDangerous: true },
+      { name: "compare_commits", summary: "Diff entre dois commits", risk: "low" },
+    ],
+  },
+  {
+    phase: "Pull requests avançado — Fase 4",
+    description: "Diffs, reviewers, auto-merge e gestão de threads de review.",
+    tools: [
+      { name: "pr_get_diff", summary: "Diff completo do PR", risk: "low" },
+      { name: "pr_get_patch", summary: "Patch formato git", risk: "low" },
+      { name: "pr_get_file_patch", summary: "Patch de um arquivo específico", risk: "low" },
+      { name: "pr_list_changed_files", summary: "Arquivos alterados (resumo)", risk: "low" },
+      { name: "pr_request_reviewers", summary: "Solicita reviewers", risk: "medium" },
+      { name: "pr_mark_ready_for_review", summary: "Sai de draft", risk: "medium" },
+      { name: "pr_convert_to_draft", summary: "Volta para draft", risk: "medium" },
+      { name: "pr_enable_auto_merge", summary: "Habilita auto-merge", risk: "high", requiresDangerous: true },
+      { name: "pr_dismiss_review", summary: "Dismiss review com motivo obrigatório", risk: "high", requiresDangerous: true },
+      { name: "review_thread_resolve", summary: "Resolve thread de review", risk: "medium" },
+      { name: "review_thread_unresolve", summary: "Reabre thread", risk: "medium" },
+      { name: "pr_risk_review", summary: "Avalia risco de um PR antes de operar", risk: "low" },
+    ],
+  },
+  {
+    phase: "Projects V2 — Fase 5",
+    description: "GraphQL para itens; REST para views (organization-owned).",
+    tools: [
+      { name: "project_get", summary: "Metadados do projeto", risk: "low" },
+      { name: "project_list_fields", summary: "Campos custom", risk: "low" },
+      { name: "project_list_items", summary: "Itens do projeto", risk: "low" },
+      { name: "project_add_issue", summary: "Adiciona issue ao projeto", risk: "medium" },
+      { name: "project_update_item", summary: "Atualiza campo de item", risk: "medium" },
+      { name: "project_list_views", summary: "Views existentes", risk: "low" },
+      { name: "project_create_view", summary: "Cria view (table/board/roadmap)", risk: "medium" },
+      { name: "project_update_view", summary: "Atualiza view", risk: "medium" },
+      { name: "project_delete_view", summary: "Remove view", risk: "high", requiresDangerous: true },
+    ],
+  },
+  {
+    phase: "Segurança — Fase 6",
+    description: "Preflight, detecção de injection, allowlists.",
+    tools: [
+      { name: "write_preflight_check", summary: "Decisão estruturada de escrita (sem chamar GitHub)", risk: "low" },
+      { name: "injection_detect", summary: "Padrões de prompt injection em respostas", risk: "low" },
+      { name: "ci_gate_check", summary: "Gate de CI antes de merge (em desenvolvimento)", risk: "low", planned: true },
+    ],
+  },
+];
+
+window.TOOL_CATALOG = TOOL_CATALOG;
