@@ -28,7 +28,8 @@ function ToolCard({ tool }: { tool: ToolSummary }) {
 }
 
 export function App() {
-  const [serverUrl, setServerUrl] = useState('');
+  const [serverUrl, setServerUrl] = useState(import.meta.env.VITE_MCP_URL ?? '');
+  const [token, setToken] = useState(import.meta.env.VITE_MCP_TOKEN ?? '');
   const [snapshot, setSnapshot] = useState<ConsoleSnapshot | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [risk, setRisk] = useState<RiskLevel | 'all'>('all');
@@ -36,7 +37,7 @@ export function App() {
   const [adapter, setAdapter] = useState<ConsoleAdapter>(mockAdapter);
 
   useEffect(() => {
-    const next = serverUrl ? createLiveMcpAdapter(serverUrl) : mockAdapter;
+    const next = serverUrl ? createLiveMcpAdapter(serverUrl, { token }) : mockAdapter;
     setAdapter(next);
     setError(null);
     next
@@ -47,7 +48,7 @@ export function App() {
         setAdapter(mockAdapter);
         return mockAdapter.loadSnapshot().then(setSnapshot);
       });
-  }, [serverUrl]);
+  }, [serverUrl, token]);
 
   const tools = useMemo(() => {
     const items = snapshot?.tools ?? [];
@@ -70,6 +71,15 @@ export function App() {
         <label className="server-input">
           <span>MCP URL</span>
           <input value={serverUrl} onChange={(event) => setServerUrl(event.target.value)} placeholder="empty = mock mode" />
+        </label>
+        <label className="server-input">
+          <span>Bearer token (optional)</span>
+          <input
+            value={token}
+            onChange={(event) => setToken(event.target.value)}
+            placeholder="empty = no Authorization header"
+            type="password"
+          />
         </label>
       </header>
 

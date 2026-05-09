@@ -1,6 +1,7 @@
 import type { ConsoleAdapter, ConsoleSnapshot, ServerInfo, ToolSummary } from '../types/mcp';
 
 type McpResponse<T> = { result?: { content?: Array<{ type: string; text?: string }> } | T; error?: unknown };
+type LiveAdapterOptions = { token?: string };
 
 const inferRisk = (name: string): ToolSummary['risk'] => {
   if (name.includes('merge') || name.includes('delete') || name.includes('dismiss') || name.includes('update_ref')) return 'high';
@@ -17,31 +18,47 @@ const phaseFor = (name: string): string => {
   return 'Tools';
 };
 
-async function mcpCall<T>(baseUrl: string, name: string, args: Record<string, unknown>): Promise<T> {
+async function mcpCall<T>(baseUrl: string, name: string, args: Record<string, unknown>, options?: LiveAdapterOptions): Promise<T> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+  };
+  const token = options?.token?.trim();
+  if (token) headers.Authorization = `Bearer ${token}`;
+
   const res = await fetch(`${baseUrl}/mcp`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name, arguments: args } }),
   });
-  if (!res.ok) throw new Error(`MCP request failed: ${res.status}`);
+  if (!res.ok) {
+    let details = '';
+    try {
+      const errorPayload = (await res.json()) as { error?: string; reason?: string; message?: string };
+      details = errorPayload.reason || errorPayload.message || errorPayload.error || '';
+    } catch {
+      details = '';
+    }
+    throw new Error(`MCP request failed: ${res.status}${details ? ` (${details})` : ''}`);
+  }
   const payload = (await res.json()) as McpResponse<T>;
   if (payload.error) throw new Error(String(payload.error));
   const text = Array.isArray((payload.result as any)?.content) ? (payload.result as any).content[0]?.text : undefined;
   return (text ? JSON.parse(text) : payload.result) as T;
 }
 
-export function createLiveMcpAdapter(serverUrl: string): ConsoleAdapter {
+export function createLiveMcpAdapter(serverUrl: string, options?: LiveAdapterOptions): ConsoleAdapter {
   const base = serverUrl.replace(/\/$/, '');
   return {
     async loadSnapshot(): Promise<ConsoleSnapshot> {
-      const server = await mcpCall<ServerInfo>(base, 'server_info', {});
+      const server = await mcpCall<ServerInfo>(base, 'server_info', {}, options);
       const toolNames = server.tool_names ?? [];
       const tools = toolNames.map((name) => ({ name, phase: phaseFor(name), summary: 'Runtime tool from server_info.tool_names', risk: inferRisk(name) }));
       return { mode: 'live', server, tools, warnings: [] };
     },
 
     async callTool<T = unknown>(name: string, args: Record<string, unknown>): Promise<T> {
-      return mcpCall<T>(base, name, args);
+      return mcpCall<T>(base, name, args, options);
     },
   };
 }

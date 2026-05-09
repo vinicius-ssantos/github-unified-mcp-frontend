@@ -254,6 +254,17 @@ npm install
 npm run dev
 ```
 
+Create a local `.env` from `.env.example` and set:
+
+```bash
+VITE_MCP_URL=/
+VITE_MCP_PROXY_TARGET=https://github-unified-mcp.onrender.com
+VITE_MCP_TOKEN=your_token_here
+```
+
+`VITE_MCP_URL` and `VITE_MCP_TOKEN` are loaded automatically by Vite.
+In local dev (`npm run dev`), Vite proxies `/mcp` to `VITE_MCP_PROXY_TARGET` to avoid browser CORS issues.
+
 ## Build
 
 ```bash
