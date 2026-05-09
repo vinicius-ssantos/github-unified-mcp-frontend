@@ -205,6 +205,15 @@ cython_debug/
 #   and can be added to the global gitignore or merged into this file. However, if you prefer, 
 #   you could uncomment the following to ignore the entire vscode folder
 # .vscode/
+# Frontend/TS local artifacts
+node_modules/
+*.tsbuildinfo
+
+# IDE local metadata
+.idea/
+
+# Local scratch files
+.tmp-*
 # Temporary file for partial code execution
 tempCodeRunnerFile.py
 
