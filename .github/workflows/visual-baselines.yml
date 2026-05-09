@@ -37,7 +37,7 @@ jobs:
 
           git checkout -B "$BASELINE_BRANCH"
 
-          git add tests/ui/**/console-visual.spec.ts-snapshots
+          git add tests/ui/console-visual.spec.ts-snapshots
           if git diff --cached --quiet; then
             echo "No visual baseline changes to commit."
             exit 0
@@ -64,7 +64,7 @@ jobs:
         with:
           name: visual-baselines
           path: |
-            tests/ui/**/console-visual.spec.ts-snapshots/**
+            tests/ui/console-visual.spec.ts-snapshots/**
             test-results/
             playwright-report/
           retention-days: 7
