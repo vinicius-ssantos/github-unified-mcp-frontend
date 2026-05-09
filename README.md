@@ -7,7 +7,7 @@ Frontend console for `github-unified-mcp`.
 This repository now contains two tracks:
 
 1. `Painel MCP.html` and the original imported prototype scaffold.
-2. A new Vite + React + TypeScript app under `src/`.
+2. A Vite + React + TypeScript app under `src/`.
 
 The Vite app is the preferred path forward. The original prototype remains as visual/product reference.
 
@@ -25,6 +25,34 @@ npm run build
 ```
 
 The build script runs TypeScript project build before Vite production build.
+
+## UI tests
+
+```bash
+npm run test:ui
+```
+
+The UI smoke suite runs against Chromium, Firefox, WebKit, and a mobile Chrome viewport in CI.
+
+## Visual regression
+
+Generate visual baselines with:
+
+```bash
+npm run test:visual:update
+```
+
+Validate existing baselines with:
+
+```bash
+npm run test:visual
+```
+
+Visual tests are gated by `VISUAL_REGRESSION=1` so the normal UI smoke suite does not fail until baseline screenshots are intentionally generated and committed.
+
+To generate CI-like baselines, run the **Generate Visual Baselines** workflow manually from GitHub Actions. It uploads the generated snapshots as an artifact. Review the images before committing them.
+
+Playwright stores screenshot baselines next to the visual spec in a `*-snapshots` directory. Browser rendering can vary by OS, fonts, hardware, headless mode, and browser engine, so snapshots should be generated and compared in a consistent environment.
 
 ## Architecture
 
