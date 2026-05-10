@@ -10,10 +10,10 @@ const inferRisk = (name: string): ToolSummary['risk'] => {
 
 const phaseFor = (name: string): string => {
   if (name.startsWith('pr_') || name.includes('review')) return 'Pull Requests';
-  if (name.startsWith('actions_') { || name.includes('ci_')) return 'Actions';
+  if (name.startsWith('actions_') || name.includes('ci_')) return 'Actions';
   if (name.startsWith('repo_') || name.startsWith('file_') || name.startsWith('git_')) return 'Repository';
   if (name.startsWith('project_')) return 'Projects';
-  if (name.includes('server') { || name.includes('github_get_me')) return 'Diagnostics';
+  if (name.includes('server') || name.includes('github_get_me')) return 'Diagnostics';
   return 'Tools';
 };
 
