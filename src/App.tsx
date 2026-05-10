@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { mockAdapter } from './adapters/mockAdapter';
 import { createLiveMcpAdapter } from './adapters/liveMcpAdapter';
-import type { ConsoleSnapshot, RiskLevel, ToolSummary } from './types/mcp';
+import type { ConsoleSnapshot, RiskLevel, RuntimePosture, ToolSummary } from './types/mcp';
 
 const riskRank: Record<RiskLevel, number> = { low: 0, medium: 1, high: 2 };
 
@@ -9,6 +9,49 @@ function formatUptime(seconds: number): string {
   const days = Math.floor(seconds / 86400);
   const hours = Math.floor((seconds % 86400) / 3600);
   return `${days}d ${hours}h`;
+}
+
+function shortSha(sha: string): string {
+  if (!sha || sha === 'local-demo') return sha;
+  return sha.slice(0, 7);
+}
+
+function PostureCard({ posture }: { posture: RuntimePosture }) {
+  return (
+    <section className="panel posture-panel">
+      <div className="panel-head">
+        <div>
+          <h2>Health + runtime posture</h2>
+          <p>Read-only operator view over `/healthz`, `server_info`, and safety configuration.</p>
+        </div>
+        <span className={`status-pill status-${posture.health.status}`}>{posture.health.status}</span>
+      </div>
+
+      <div className="posture-summary">
+        <div>
+          <span>runtime mode</span>
+          <strong>{posture.mode}</strong>
+        </div>
+        <div>
+          <span>health source</span>
+          <strong>{posture.health.source}</strong>
+        </div>
+        <div>
+          <span>health detail</span>
+          <strong>{posture.health.detail ?? 'not reported'}</strong>
+        </div>
+      </div>
+
+      <div className="flag-grid">
+        {posture.safety_flags.map((flag) => (
+          <article className={`flag flag-${flag.state}`} key={flag.label}>
+            <span>{flag.label}</span>
+            <strong>{flag.value}</strong>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
 }
 
 function ToolCard({ tool }: { tool: ToolSummary }) {
@@ -69,8 +112,10 @@ export function App() {
       {snapshot && (
         <section className="stats">
           <div><span>mode</span><strong>{snapshot.mode}</strong></div>
+          <div><span>runtime</span><strong>{snapshot.posture.mode}</strong></div>
           <div><span>version</span><strong>{snapshot.server.version}</strong></div>
           <div><span>schema</span><strong>{snapshot.server.tool_schema_version}</strong></div>
+          <div><span>commit</span><strong>{shortSha(snapshot.server.commit_sha)}</strong></div>
           <div><span>uptime</span><strong>{formatUptime(snapshot.server.uptime_seconds)}</strong></div>
           <div><span>tools</span><strong>{snapshot.server.tool_count ?? snapshot.tools.length}</strong></div>
           <div><span>risk</span><strong>{highRisk} high · {mediumRisk} med</strong></div>
@@ -79,6 +124,8 @@ export function App() {
 
       {error && <div className="notice">Live mode failed, using mock data: {error}</div>}
       {snapshot?.warnings.map((warning) => <div className="notice" key={warning}>{warning}</div>)}
+
+      {snapshot && <PostureCard posture={snapshot.posture} />}
 
       <section className="panel">
         <div className="panel-head">
