@@ -8,7 +8,7 @@ test.describe('MCP console visual regression', () => {
 
   test('home console mock mode', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByRole('heading', { name: 'Frontend console' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'MCP Console' })).toBeVisible();
     await expect(page).toHaveScreenshot('home-console-mock.png', { fullPage: true, maxDiffPixelRatio: 0.01 });
   });
 
