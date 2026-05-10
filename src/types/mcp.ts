@@ -28,6 +28,45 @@ export type ConsoleSnapshot = {
   warnings: string[];
 };
 
+// Vercel deploy types
+export type VercelCredentials = {
+  valid: boolean;
+  user?: string;
+  team?: string;
+  error?: string;
+};
+
+export type VercelEnvCheck = {
+  found: string[];
+  warnings: string[];
+};
+
+export type VercelPlan = {
+  project_name: string;
+  github_repo: string;
+  branch: string;
+  framework: string;
+  build_command: string;
+  output_dir: string;
+  public_env_check: VercelEnvCheck;
+};
+
+export type VercelDeployResult = {
+  deployment_id: string;
+  url: string;
+  status: string;
+  error?: string;
+};
+
+export type VercelDeployStatus = {
+  id: string;
+  status: 'QUEUED' | 'BUILDING' | 'READY' | 'ERROR' | 'CANCELED';
+  url?: string;
+  preview_url?: string;
+  error?: string;
+};
+
 export type ConsoleAdapter = {
   loadSnapshot(): Promise<ConsoleSnapshot>;
+  callTool<T = unknown>(name: string, args: Record<string, unknown>): Promise<T>;
 };

@@ -17,26 +17,31 @@ const phaseFor = (name: string): string => {
   return 'Tools';
 };
 
+async function mcpCall<T>(baseUrl: string, name: string, args: Record<string, unknown>): Promise<T> {
+  const res = await fetch(`${baseUrl}/mcp`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name, arguments: args } }),
+  });
+  if (!res.ok) throw new Error(`MCP request failed: ${res.status}`);
+  const payload = (await res.json()) as McpResponse<T>;
+  if (payload.error) throw new Error(String(payload.error));
+  const text = Array.isArray((payload.result as any)?.content) ? (payload.result as any).content[0]?.text : undefined;
+  return (text ? JSON.parse(text) : payload.result) as T;
+}
+
 export function createLiveMcpAdapter(serverUrl: string): ConsoleAdapter {
+  const base = serverUrl.replace(/\/$/, '');
   return {
     async loadSnapshot(): Promise<ConsoleSnapshot> {
-      const res = await fetch(`${serverUrl.replace(/\/$/, '')}/mcp`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          jsonrpc: '2.0',
-          id: 1,
-          method: 'tools/call',
-          params: { name: 'server_info', arguments: {} },
-        }),
-      });
-      if (!res.ok) throw new Error(`MCP request failed: ${res.status}`);
-      const payload = (await res.json()) as McpResponse<ServerInfo>;
-      const text = Array.isArray((payload.result as any)?.content) ? (payload.result as any).content[0]?.text : undefined;
-      const server = (text ? JSON.parse(text) : payload.result) as ServerInfo;
+      const server = await mcpCall<ServerInfo>(base, 'server_info', {});
       const toolNames = server.tool_names ?? [];
       const tools = toolNames.map((name) => ({ name, phase: phaseFor(name), summary: 'Runtime tool from server_info.tool_names', risk: inferRisk(name) }));
       return { mode: 'live', server, tools, warnings: [] };
+    },
+
+    async callTool<T = unknown>(name: string, args: Record<string, unknown>): Promise<T> {
+      return mcpCall<T>(base, name, args);
     },
   };
 }

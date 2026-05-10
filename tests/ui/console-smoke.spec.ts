@@ -4,7 +4,7 @@ test.describe('MCP console UI', () => {
   test('renders mock dashboard and filters high-risk tools', async ({ page }, testInfo) => {
     await page.goto('/');
 
-    await expect(page.getByRole('heading', { name: 'Frontend console' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'MCP Console' })).toBeVisible();
     await expect(page.getByText('mock', { exact: true })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Tool catalog' })).toBeVisible();
 
