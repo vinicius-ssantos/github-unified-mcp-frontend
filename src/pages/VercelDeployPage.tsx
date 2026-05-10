@@ -121,15 +121,24 @@ export function VercelDeployPage({ adapter }: Props) {
       setDeploymentId(result.deployment_id);
       setDeployStatus({ id: result.deployment_id, status: result.status as VercelDeployStatus['status'], url: result.url });
       setStep('polling');
+      let pollErrors = 0;
       pollRef.current = setInterval(async () => {
         try {
           const status = await adapter.callTool<VercelDeployStatus>('vercel_get_deploy_status', { deployment_id: result.deployment_id });
+          pollErrors = 0;
           setDeployStatus(status);
           if (status.status === 'READY' || status.status === 'ERROR' || status.status === 'CANCELED') {
             stopPolling();
             setStep('idle');
           }
-        } catch { /* polling errors are silent */ }
+        } catch (err) {
+          pollErrors += 1;
+          if (pollErrors >= 3) {
+            stopPolling();
+            setStep('idle');
+            setError(`Polling stopped after repeated failures: ${err instanceof Error ? err.message : String(err)}`);
+          }
+        }
       }, 5000);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));

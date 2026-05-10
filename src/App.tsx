@@ -44,6 +44,7 @@ export function App() {
       .then(setSnapshot)
       .catch((err: unknown) => {
         setError(err instanceof Error ? err.message : String(err));
+        setAdapter(mockAdapter);
         return mockAdapter.loadSnapshot().then(setSnapshot);
       });
   }, [serverUrl]);
