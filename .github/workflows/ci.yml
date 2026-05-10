@@ -32,6 +32,8 @@ jobs:
         run: npx playwright install --with-deps
       - name: Run UI smoke tests
         run: npm run test:ui
+      - name: Run visual regression tests
+        run: npm run test:visual
       - name: Upload Playwright report
         if: always()
         uses: actions/upload-artifact@v4
