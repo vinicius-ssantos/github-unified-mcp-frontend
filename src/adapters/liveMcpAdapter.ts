@@ -133,7 +133,7 @@ export function createLiveMcpAdapter(serverUrl: string): ConsoleAdapter {
         server,
         posture: buildPosture(server, health),
         tools,
-        warnings: health.ok ? [] : [`Live health check reported: ${health.detail}`'],
+        warnings: health.ok ? [] : [`Live health check reported: ${health.detail}`],
       };
     },
   };
