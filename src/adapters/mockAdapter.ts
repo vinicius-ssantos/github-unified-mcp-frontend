@@ -1,4 +1,4 @@
-import type { ConsoleAdapter, ConsoleSnapshot, ToolSummary, VercelCredentials, VercelDeployResult, VercelDeployStatus, VercelPlan } from '../types/mcp';
+import type { ConsoleAdapter, ConsoleSnapshot, ToolSummary } from '../types/mcp';
 
 const tools: ToolSummary[] = [
   { name: 'server_info', phase: 'Diagnostics', summary: 'Runtime diagnostics and security flags', risk: 'low' },
@@ -10,38 +10,6 @@ const tools: ToolSummary[] = [
   { name: 'pr_merge', phase: 'Dangerous', summary: 'Merge a pull request with CI gate and confirmation', risk: 'high', requiresConfirm: true, requiresDangerous: true },
 ];
 
-const mockVercelCredentials: VercelCredentials = {
-  valid: true,
-  user: 'demo-user',
-  team: 'demo-team',
-};
-
-const mockVercelPlan = (args: Record<string, unknown>): VercelPlan => ({
-  project_name: String(args.project_name ?? 'deploy-orchestrator-mcp-frontend'),
-  github_repo: String(args.github_repo ?? 'vinicius-ssantos/github-unified-mcp-frontend'),
-  branch: String(args.branch ?? 'main'),
-  framework: String(args.framework ?? 'vite'),
-  build_command: String(args.build_command ?? 'npm run build'),
-  output_dir: String(args.output_dir ?? 'dist'),
-  public_env_check: {
-    found: ['VITE_MCP_URL'],
-    warnings: ['VITE_MCP_URL may expose internal endpoint — review before deploying to production.'],
-  },
-});
-
-const mockVercelDeployResult: VercelDeployResult = {
-  deployment_id: 'dpl_mock_abc123',
-  url: 'https://deploy-orchestrator-mcp-frontend-abc123.vercel.app',
-  status: 'BUILDING',
-};
-
-const mockVercelStatus: VercelDeployStatus = {
-  id: 'dpl_mock_abc123',
-  status: 'READY',
-  url: 'https://deploy-orchestrator-mcp-frontend-abc123.vercel.app',
-  preview_url: 'https://deploy-orchestrator-mcp-frontend-abc123.vercel.app',
-};
-
 export const mockAdapter: ConsoleAdapter = {
   async loadSnapshot(): Promise<ConsoleSnapshot> {
     return {
@@ -51,25 +19,31 @@ export const mockAdapter: ConsoleAdapter = {
         tool_schema_version: 'mock-schema',
         commit_sha: 'local-demo',
         uptime_seconds: 14221,
-        read_only: false,
+        read_only: true,
         dangerous_tools_enabled: false,
         workflow_dispatch_enabled: false,
         tool_count: tools.length,
         tool_names: tools.map((tool) => tool.name),
+        allowed_repos_count: 1,
+        protected_branches_count: 1,
+        oauth_redirect_strict: true,
+        rate_limit_enabled: true,
+      },
+      posture: {
+        mode: 'read_only',
+        health: { ok: true, status: 'healthy', source: 'mock', detail: 'Mock health endpoint is healthy.' },
+        safety_flags: [
+          { label: 'Browser posture', value: 'read-only', state: 'safe' },
+          { label: 'Dangerous tools', value: 'disabled', state: 'safe' },
+          { label: 'Workflow dispatch', value: 'disabled', state: 'safe' },
+          { label: 'Allowed repos', value: '1 configured', state: 'safe' },
+          { label: 'Protected branches', value: '1 detected', state: 'safe' },
+          { label: 'OAuth redirects', value: 'strict', state: 'safe' },
+          { label: 'Rate limit', value: 'enabled', state: 'safe' },
+        ],
       },
       tools,
       warnings: ['Mock mode: no GitHub token or destructive operation is used in the browser.'],
     };
-  },
-
-  async callTool<T = unknown>(name: string, args: Record<string, unknown>): Promise<T> {
-    await new Promise((resolve) => setTimeout(resolve, 600));
-    switch (name) {
-      case 'vercel_validate_credentials': return mockVercelCredentials as T;
-      case 'vercel_project_plan': return mockVercelPlan(args) as T;
-      case 'vercel_deploy_preview': return mockVercelDeployResult as T;
-      case 'vercel_get_deploy_status': return mockVercelStatus as T;
-      default: throw new Error(`Mock: unknown tool "${name}"`);
-    }
   },
 };
