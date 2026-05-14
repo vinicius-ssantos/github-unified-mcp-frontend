@@ -72,6 +72,7 @@ function ConsoleA({ mode = "read_only", density = "compact", forceError = false,
   const [liveInfo, setLiveInfo] = React.useState(null); // from server_info tool
   const [fetchError, setFetchError] = React.useState(false);
   const [liveTools, setLiveTools] = React.useState(null); // from tools/list
+  const [lastRefreshed, setLastRefreshed] = React.useState(null);
   const isDemo = !serverUrl || fetchError || liveHealth === null;
 
   // Live fetch /healthz every 30s
@@ -83,7 +84,7 @@ function ConsoleA({ mode = "read_only", density = "compact", forceError = false,
         const r = await fetch(`${serverUrl}/healthz`, { signal: AbortSignal.timeout(5000) });
         if (!r.ok) throw new Error("non-200");
         const data = await r.json();
-        if (!cancelled) { setLiveHealth(data); setFetchError(false); }
+        if (!cancelled) { setLiveHealth(data); setFetchError(false); setLastRefreshed(new Date()); }
       } catch {
         if (!cancelled) setFetchError(true);
       }
@@ -221,6 +222,7 @@ function ConsoleA({ mode = "read_only", density = "compact", forceError = false,
         else if (e.key === "p") { setTab("playground"); gPressedRef.current = 0; }
         else if (e.key === "b") { setTab("pr"); gPressedRef.current = 0; }
         else if (e.key === "e") { setTab("wizard"); gPressedRef.current = 0; }
+        else if (e.key === "v") { setTab("vercel"); gPressedRef.current = 0; }
       }
     };
     window.addEventListener("keydown", onKey);
@@ -326,6 +328,12 @@ function ConsoleA({ mode = "read_only", density = "compact", forceError = false,
             <span className="ca-pill-k">uptime</span>
             <LiveUptime baseSeconds={state.healthz.uptime_seconds} stopped={forceError} />
           </div>
+          {lastRefreshed && !isDemo && (
+            <div className="ca-topbar-pill" style={{ opacity: 0.6 }}>
+              <span className="ca-pill-k">sync</span>
+              <span className="mono">{lastRefreshed.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</span>
+            </div>
+          )}
         </div>
         <div className="ca-topbar-right">
           <div className={`ca-mode ca-mode-${state.posture}`}>
@@ -345,6 +353,7 @@ function ConsoleA({ mode = "read_only", density = "compact", forceError = false,
           ["playground", "Playground ▶", "p"],
           ["pr", "PR Readiness", "b"],
           ["wizard", ".env wizard", "e"],
+          ["vercel", "Vercel ▲", "v"],
         ].map(([k, label, key]) => (          <button key={k} onClick={() => setTab(k)} className={`ca-tab ${tab === k ? "is-active" : ""}`}>
             {label}
             <span className="ca-tab-key mono">g{key}</span>
@@ -385,6 +394,7 @@ function ConsoleA({ mode = "read_only", density = "compact", forceError = false,
         {tab === "wizard" && <window.EnvWizard />}
         {tab === "playground" && window.PlaygroundA && <window.PlaygroundA serverUrl={serverUrl} mode={mode} initialTool={playgroundTool} bearerToken={bearerToken} />}
         {tab === "pr" && window.PrReadyA && <window.PrReadyA serverUrl={serverUrl} mode={mode} bearerToken={bearerToken} />}
+        {tab === "vercel" && window.VercelDeployA && <window.VercelDeployA serverUrl={serverUrl} bearerToken={bearerToken} />}
       </div>
 
       {activeTool && <window.ToolDrawer
@@ -406,6 +416,7 @@ function ConsoleA({ mode = "read_only", density = "compact", forceError = false,
                 [["g","p"], "Playground"],
                 [["g","b"], "PR Readiness"],
                 [["g","e"], ".env wizard"],
+                [["g","v"], "Vercel Deploy"],
               ].map(([keys, label]) => (
                 <div key={label} className="ca-help-row">
                   <div className="ca-help-keys">
