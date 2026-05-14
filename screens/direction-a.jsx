@@ -66,7 +66,7 @@ function writeHash(state) {
   }
 }
 
-function ConsoleA({ mode = "read_only", density = "compact", forceError = false, serverUrl = "" }) {
+function ConsoleA({ mode = "read_only", density = "compact", forceError = false, serverUrl = "", bearerToken = "" }) {
   const baseState = window.SERVER_STATES[mode];
   const [liveHealth, setLiveHealth] = React.useState(null);
   const [liveInfo, setLiveInfo] = React.useState(null); // from server_info tool
@@ -88,12 +88,13 @@ function ConsoleA({ mode = "read_only", density = "compact", forceError = false,
         if (!cancelled) setFetchError(true);
       }
     };
+    const authHeaders = bearerToken ? { "Authorization": `Bearer ${bearerToken}` } : {};
     // Live fetch server_info via MCP call
     const fetchServerInfo = async () => {
       try {
         const r = await fetch(`${serverUrl}/mcp`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...authHeaders },
           body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "server_info", arguments: {} } }),
           signal: AbortSignal.timeout(6000),
         });
@@ -109,17 +110,18 @@ function ConsoleA({ mode = "read_only", density = "compact", forceError = false,
     fetchServerInfo();
     const iv = setInterval(() => { fetchHealth(); fetchServerInfo(); }, 30_000);
     return () => { cancelled = true; clearInterval(iv); };
-  }, [serverUrl]);
+  }, [serverUrl, bearerToken]);
 
   // Fetch tools/list once on connect for schema drift detection
   useEffect(() => {
     if (!serverUrl) { setLiveTools(null); return; }
     let cancelled = false;
+    const authHeaders = bearerToken ? { "Authorization": `Bearer ${bearerToken}` } : {};
     const fetchToolsList = async () => {
       try {
         const r = await fetch(`${serverUrl}/mcp`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...authHeaders },
           body: JSON.stringify({ jsonrpc: "2.0", id: 99, method: "tools/list", params: {} }),
           signal: AbortSignal.timeout(8000),
         });
@@ -381,8 +383,8 @@ function ConsoleA({ mode = "read_only", density = "compact", forceError = false,
         {tab === "audit" && <AuditA rowPad={rowPad} cellFs={cellFs} />}
         {tab === "runbook" && <RunbookA state={state} />}
         {tab === "wizard" && <window.EnvWizard />}
-        {tab === "playground" && window.PlaygroundA && <window.PlaygroundA serverUrl={serverUrl} mode={mode} initialTool={playgroundTool} />}
-        {tab === "pr" && window.PrReadyA && <window.PrReadyA serverUrl={serverUrl} mode={mode} />}
+        {tab === "playground" && window.PlaygroundA && <window.PlaygroundA serverUrl={serverUrl} mode={mode} initialTool={playgroundTool} bearerToken={bearerToken} />}
+        {tab === "pr" && window.PrReadyA && <window.PrReadyA serverUrl={serverUrl} mode={mode} bearerToken={bearerToken} />}
       </div>
 
       {activeTool && <window.ToolDrawer

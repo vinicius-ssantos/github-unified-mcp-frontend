@@ -68,7 +68,7 @@ function generateDemoResponse(toolName, args) {
   return dynamic[toolName] || { demo: true, tool: toolName, args: { ...args }, note: "configure serverUrl nos Tweaks para dados reais" };
 }
 
-function PlaygroundA({ serverUrl, mode, initialTool }) {
+function PlaygroundA({ serverUrl, mode, initialTool, bearerToken = "" }) {
   const { useState, useMemo, useEffect } = React;
 
   const safeTools = useMemo(() =>
@@ -137,9 +137,10 @@ function PlaygroundA({ serverUrl, mode, initialTool }) {
           args[inp.name] = formArgs[inp.name];
         }
       });
+      const authHeaders = bearerToken ? { "Authorization": `Bearer ${bearerToken}` } : {};
       const resp = await fetch(`${serverUrl}/mcp`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...authHeaders },
         body: JSON.stringify({ jsonrpc: "2.0", id: Date.now(), method: "tools/call", params: { name: selectedTool, arguments: args } }),
         signal: AbortSignal.timeout(10000),
       });

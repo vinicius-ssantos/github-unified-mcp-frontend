@@ -34,6 +34,7 @@ const DEFAULTS = /*EDITMODE-BEGIN*/{
   "density": "compact",
   "errorState": false,
   "serverUrl": "",
+  "bearerToken": "",
   "view": "console"
 }/*EDITMODE-END*/;
 
@@ -47,7 +48,7 @@ function App() {
       {tweaks.view === "calm" && PanelB
         ? <PanelB mode={tweaks.mode} />
         : ConsoleA
-          ? <ConsoleA mode={tweaks.mode} density={tweaks.density} forceError={tweaks.errorState} serverUrl={tweaks.serverUrl} />
+          ? <ConsoleA mode={tweaks.mode} density={tweaks.density} forceError={tweaks.errorState} serverUrl={tweaks.serverUrl} bearerToken={tweaks.bearerToken} />
           : <div style={{color:'var(--text)',padding:40,fontFamily:'monospace'}}>Carregando…</div>
       }
 
@@ -60,6 +61,13 @@ function App() {
               onChange={(v) => setTweak('serverUrl', v)}
               placeholder="https://seu-servidor.onrender.com"
               hint="Deixe vazio para modo demo com dados mock"
+            />
+            <window.TweakText
+              label="Bearer token"
+              value={tweaks.bearerToken}
+              onChange={(v) => setTweak('bearerToken', v)}
+              placeholder="mcp_..."
+              hint="Necessário quando MCP_AUTH_MODE=bearer"
             />
             <window.TweakRadio
               label="Postura (demo)"
