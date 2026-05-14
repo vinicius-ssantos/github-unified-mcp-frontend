@@ -90,7 +90,7 @@ export default function PlaygroundA({ serverUrl, initialTool, bearerToken = "" }
           args[inp.name] = formArgs[inp.name];
         }
       });
-      const authHeaders = bearerToken ? { "Authorization": `Bearer ${bearerToken}` } : {};
+      const authHeaders: Record<string, string> = bearerToken ? { "Authorization": `Bearer ${bearerToken}` } : {};
       const resp = await fetch(`${serverUrl}/mcp`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...authHeaders },

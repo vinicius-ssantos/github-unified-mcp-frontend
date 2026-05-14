@@ -1,7 +1,7 @@
 import StatusDot from './StatusDot';
 import { SERVER_STATES } from '../data/serverState';
 import { getSchema } from '../data/schemas';
-import type { ToolFlatEntry } from '../types/mcp';
+import type { ToolFlatEntry, ServerInfoFlags } from '../types/mcp';
 
 type Props = {
   tool: ToolFlatEntry;
@@ -10,7 +10,7 @@ type Props = {
   onPlayground: (name: string) => void;
 };
 
-function guardChain(tool: ToolFlatEntry, state: ReturnType<typeof SERVER_STATES[string]['server_info'] & object>) {
+function guardChain(tool: ToolFlatEntry, state: ServerInfoFlags) {
   return [
     { step: "01", name: "Allowlist de repositórios", pass: state.require_allowed_repos, note: "GITHUB_REQUIRE_ALLOWED_REPOS=true" },
     { step: "02", name: "OAuth válido", pass: true, note: "Bearer token assinado e dentro do TTL" },

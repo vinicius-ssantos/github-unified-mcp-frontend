@@ -458,7 +458,7 @@ export default function ConsoleA({ mode = "read_only", density = "compact", forc
   useEffect(() => {
     if (!serverUrl) { setLiveHealth(null); setLiveInfo(null); setFetchError(false); return; }
     let cancelled = false;
-    const authHeaders = bearerToken ? { "Authorization": `Bearer ${bearerToken}` } : {};
+    const authHeaders: Record<string, string> = bearerToken ? { "Authorization": `Bearer ${bearerToken}` } : {};
     const fetchHealth = async () => {
       try {
         const r = await fetch(`${serverUrl}/healthz`, { signal: AbortSignal.timeout(5000) });
@@ -484,7 +484,7 @@ export default function ConsoleA({ mode = "read_only", density = "compact", forc
   useEffect(() => {
     if (!serverUrl) { setLiveTools(null); return; }
     let cancelled = false;
-    const authHeaders = bearerToken ? { "Authorization": `Bearer ${bearerToken}` } : {};
+    const authHeaders: Record<string, string> = bearerToken ? { "Authorization": `Bearer ${bearerToken}` } : {};
     const fetchToolsList = async () => {
       try {
         const r = await fetch(`${serverUrl}/mcp`, { method:"POST", headers:{"Content-Type":"application/json",...authHeaders}, body:JSON.stringify({jsonrpc:"2.0",id:99,method:"tools/list",params:{}}), signal:AbortSignal.timeout(8000) });

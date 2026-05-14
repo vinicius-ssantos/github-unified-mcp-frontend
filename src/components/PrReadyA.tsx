@@ -51,7 +51,7 @@ export default function PrReadyA({ serverUrl, bearerToken = "" }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   const callTool = async (name: string, args: Record<string, unknown>) => {
-    const authHeaders = bearerToken ? { "Authorization": `Bearer ${bearerToken}` } : {};
+    const authHeaders: Record<string, string> = bearerToken ? { "Authorization": `Bearer ${bearerToken}` } : {};
     const resp = await fetch(`${serverUrl}/mcp`, {
       method: "POST",
       headers: { "Content-Type": "application/json", ...authHeaders },
