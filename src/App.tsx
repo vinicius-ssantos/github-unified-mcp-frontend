@@ -1,138 +1,112 @@
-import { useEffect, useMemo, useState } from 'react';
-import { mockAdapter } from './adapters/mockAdapter';
-import { createLiveMcpAdapter } from './adapters/liveMcpAdapter';
-import { VercelDeployPage } from './pages/VercelDeployPage';
-import type { ConsoleAdapter, ConsoleSnapshot, RiskLevel, ToolSummary } from './types/mcp';
+import { useState } from 'react';
+import ConsoleA from './components/ConsoleA';
 
-type Page = 'catalog' | 'vercel';
+type Mode = 'read_only' | 'write_safe' | 'operator';
+type Density = 'compact' | 'comfortable';
+type Settings = { serverUrl: string; bearerToken: string; mode: Mode; density: Density; forceError: boolean };
 
-const riskRank: Record<RiskLevel, number> = { low: 0, medium: 1, high: 2 };
+const STORAGE_KEY = 'mcp-panel-settings';
 
-function formatUptime(seconds: number): string {
-  const days = Math.floor(seconds / 86400);
-  const hours = Math.floor((seconds % 86400) / 3600);
-  return `${days}d ${hours}h`;
+function defaultSettings(): Settings {
+  return { serverUrl: '', bearerToken: '', mode: 'read_only', density: 'compact', forceError: false };
 }
 
-function ToolCard({ tool }: { tool: ToolSummary }) {
+function loadSettings(): Settings {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return { ...defaultSettings(), ...JSON.parse(raw) };
+  } catch { /**/ }
+  return defaultSettings();
+}
+
+function saveSettings(s: Settings) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); } catch { /**/ }
+}
+
+function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
-    <article className={`tool tool-${tool.risk}`}>
-      <div className="tool-head">
-        <span className="mono">{tool.name}</span>
-        <span className="risk">{tool.risk}</span>
-      </div>
-      <p>{tool.summary}</p>
-      <footer>{tool.phase}</footer>
-    </article>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <label style={{ fontFamily: 'monospace', fontSize: 12, color: 'var(--text-dim,#888)' }}>{label}</label>
+      {children}
+      {hint && <div style={{ fontFamily: 'monospace', fontSize: 11, color: 'var(--text-muted,#555)' }}>{hint}</div>}
+    </div>
   );
 }
 
 export function App() {
-  const [serverUrl, setServerUrl] = useState(import.meta.env.VITE_MCP_URL ?? '');
-  const [token, setToken] = useState(import.meta.env.VITE_MCP_TOKEN ?? '');
-  const [snapshot, setSnapshot] = useState<ConsoleSnapshot | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [risk, setRisk] = useState<RiskLevel | 'all'>('all');
-  const [page, setPage] = useState<Page>('catalog');
-  const [adapter, setAdapter] = useState<ConsoleAdapter>(mockAdapter);
+  const [settings, setSettings] = useState<Settings>(loadSettings);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [draft, setDraft] = useState<Settings>(settings);
 
-  useEffect(() => {
-    const next = serverUrl ? createLiveMcpAdapter(serverUrl, { token }) : mockAdapter;
-    setAdapter(next);
-    setError(null);
-    next
-      .loadSnapshot()
-      .then(setSnapshot)
-      .catch((err: unknown) => {
-        setError(err instanceof Error ? err.message : String(err));
-        setAdapter(mockAdapter);
-        return mockAdapter.loadSnapshot().then(setSnapshot);
-      });
-  }, [serverUrl, token]);
-
-  const tools = useMemo(() => {
-    const items = snapshot?.tools ?? [];
-    return items
-      .filter((tool) => risk === 'all' || tool.risk === risk)
-      .sort((a, b) => riskRank[b.risk] - riskRank[a.risk] || a.name.localeCompare(b.name));
-  }, [snapshot, risk]);
-
-  const highRisk = snapshot?.tools.filter((tool) => tool.risk === 'high').length ?? 0;
-  const mediumRisk = snapshot?.tools.filter((tool) => tool.risk === 'medium').length ?? 0;
+  const applySettings = () => {
+    setSettings(draft);
+    saveSettings(draft);
+    setSettingsOpen(false);
+  };
 
   return (
-    <main className="shell">
-      <header className="hero">
-        <div>
-          <p className="eyebrow">deploy-orchestrator-mcp · operator console</p>
-          <h1>MCP Console</h1>
-          <p className="sub">Vite + React + TypeScript scaffold for the MCP dashboard. Mock-first, live-read capable, no browser-side secrets.</p>
-        </div>
-        <label className="server-input">
-          <span>MCP URL</span>
-          <input value={serverUrl} onChange={(event) => setServerUrl(event.target.value)} placeholder="empty = mock mode" />
-        </label>
-        <label className="server-input">
-          <span>Bearer token (optional)</span>
-          <input
-            value={token}
-            onChange={(event) => setToken(event.target.value)}
-            placeholder="empty = no Authorization header"
-            type="password"
-          />
-        </label>
-      </header>
+    <>
+      <ConsoleA
+        mode={settings.mode}
+        density={settings.density}
+        forceError={settings.forceError}
+        serverUrl={settings.serverUrl}
+        bearerToken={settings.bearerToken}
+      />
 
-      {snapshot && (
-        <section className="stats">
-          <div><span>mode</span><strong>{snapshot.mode}</strong></div>
-          <div><span>version</span><strong>{snapshot.server.version}</strong></div>
-          <div><span>schema</span><strong>{snapshot.server.tool_schema_version}</strong></div>
-          <div><span>uptime</span><strong>{formatUptime(snapshot.server.uptime_seconds)}</strong></div>
-          <div><span>tools</span><strong>{snapshot.server.tool_count ?? snapshot.tools.length}</strong></div>
-          <div><span>risk</span><strong>{highRisk} high · {mediumRisk} med</strong></div>
-        </section>
-      )}
+      <button
+        onClick={() => { setDraft(settings); setSettingsOpen(true); }}
+        title="Configurações"
+        style={{ position: 'fixed', bottom: 16, right: 16, zIndex: 900, background: 'var(--surface-2,#1e1e1e)', border: '1px solid var(--border,#333)', borderRadius: 6, color: 'var(--text,#ccc)', padding: '6px 12px', cursor: 'pointer', fontFamily: 'monospace', fontSize: 12 }}
+      >⚙ settings</button>
 
-      {error && <div className="notice">Live mode failed, using mock data: {error}</div>}
-      {snapshot?.warnings.map((warning) => <div className="notice" key={warning}>{warning}</div>)}
+      {settingsOpen && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setSettingsOpen(false)}>
+          <div style={{ background: 'var(--surface,#141414)', border: '1px solid var(--border,#333)', borderRadius: 8, padding: 24, minWidth: 360, maxWidth: 480, display: 'flex', flexDirection: 'column', gap: 14 }} onClick={e => e.stopPropagation()}>
+            <div style={{ fontFamily: 'monospace', fontSize: 14, color: 'var(--text,#ccc)', marginBottom: 4 }}>configurações do painel</div>
 
-      <nav className="tab-nav">
-        <button
-          className={`tab-btn ${page === 'catalog' ? 'tab-active' : ''}`}
-          onClick={() => setPage('catalog')}
-        >
-          Tool catalog
-        </button>
-        <button
-          className={`tab-btn ${page === 'vercel' ? 'tab-active' : ''}`}
-          onClick={() => setPage('vercel')}
-        >
-          ▲ Vercel Preview Deploy
-        </button>
-      </nav>
+            <Field label="URL do servidor" hint="Deixe vazio para modo demo">
+              <input style={{ fontFamily: 'monospace', fontSize: 12, padding: '5px 8px', background: 'var(--surface-2,#1e1e1e)', border: '1px solid var(--border,#333)', borderRadius: 4, color: 'var(--text,#ccc)', width: '100%', boxSizing: 'border-box' }} value={draft.serverUrl} onChange={e => setDraft(d => ({ ...d, serverUrl: e.target.value }))} placeholder="https://github-unified-mcp.onrender.com" />
+            </Field>
 
-      {page === 'catalog' && (
-        <section className="panel">
-          <div className="panel-head">
-            <div>
-              <h2>Tool catalog</h2>
-              <p>Runtime-aware catalog view. High-risk operations stay visible but should remain server-confirmed.</p>
+            <Field label="Bearer token" hint="Necessário quando MCP_AUTH_MODE=bearer">
+              <input type="password" style={{ fontFamily: 'monospace', fontSize: 12, padding: '5px 8px', background: 'var(--surface-2,#1e1e1e)', border: '1px solid var(--border,#333)', borderRadius: 4, color: 'var(--text,#ccc)', width: '100%', boxSizing: 'border-box' }} value={draft.bearerToken} onChange={e => setDraft(d => ({ ...d, bearerToken: e.target.value }))} placeholder="mcp_..." />
+            </Field>
+
+            <Field label="Postura (demo)">
+              <div style={{ display: 'flex', gap: 6 }}>
+                {(['read_only', 'write_safe', 'operator'] as Mode[]).map(m => (
+                  <button key={m} onClick={() => setDraft(d => ({ ...d, mode: m }))}
+                    style={{ fontFamily: 'monospace', fontSize: 11, padding: '4px 10px', border: '1px solid var(--border,#333)', borderRadius: 4, cursor: 'pointer', background: draft.mode === m ? 'var(--ok,#4caf50)' : 'transparent', color: draft.mode === m ? '#000' : 'var(--text,#ccc)' }}>
+                    {m}
+                  </button>
+                ))}
+              </div>
+            </Field>
+
+            <Field label="Densidade">
+              <div style={{ display: 'flex', gap: 6 }}>
+                {(['compact', 'comfortable'] as Density[]).map(d => (
+                  <button key={d} onClick={() => setDraft(s => ({ ...s, density: d }))}
+                    style={{ fontFamily: 'monospace', fontSize: 11, padding: '4px 10px', border: '1px solid var(--border,#333)', borderRadius: 4, cursor: 'pointer', background: draft.density === d ? 'var(--info,#4a90e2)' : 'transparent', color: draft.density === d ? '#000' : 'var(--text,#ccc)' }}>
+                    {d}
+                  </button>
+                ))}
+              </div>
+            </Field>
+
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontFamily: 'monospace', fontSize: 12, color: 'var(--text,#ccc)', cursor: 'pointer' }}>
+              <input type="checkbox" checked={draft.forceError} onChange={e => setDraft(d => ({ ...d, forceError: e.target.checked }))} />
+              simular incidente (healthz 503)
+            </label>
+
+            <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+              <button onClick={applySettings} style={{ fontFamily: 'monospace', fontSize: 12, padding: '6px 18px', border: 'none', borderRadius: 4, background: 'var(--ok,#4caf50)', color: '#000', cursor: 'pointer' }}>aplicar</button>
+              <button onClick={() => setSettingsOpen(false)} style={{ fontFamily: 'monospace', fontSize: 12, padding: '6px 18px', border: '1px solid var(--border,#333)', borderRadius: 4, background: 'transparent', color: 'var(--text,#ccc)', cursor: 'pointer' }}>cancelar</button>
             </div>
-            <select value={risk} onChange={(event) => setRisk(event.target.value as RiskLevel | 'all')}>
-              <option value="all">all risks</option>
-              <option value="high">high</option>
-              <option value="medium">medium</option>
-              <option value="low">low</option>
-            </select>
           </div>
-          <div className="tools-grid">
-            {tools.map((tool) => <ToolCard key={tool.name} tool={tool} />)}
-          </div>
-        </section>
+        </div>
       )}
-
-      {page === 'vercel' && <VercelDeployPage adapter={adapter} />}
-    </main>
+    </>
   );
 }
