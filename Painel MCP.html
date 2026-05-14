@@ -26,6 +26,7 @@
 <script type="text/babel" src="screens/direction-a-playground.jsx"></script>
 <script type="text/babel" src="screens/direction-a.jsx"></script>
 <script type="text/babel" src="screens/direction-a-pr-ready.jsx"></script>
+<script type="text/babel" src="screens/direction-a-vercel.jsx"></script>
 <script type="text/babel" src="screens/direction-b.jsx"></script>
 
 <script type="text/babel">
@@ -35,7 +36,8 @@ const DEFAULTS = /*EDITMODE-BEGIN*/{
   "errorState": false,
   "serverUrl": "",
   "bearerToken": "",
-  "view": "console"
+  "view": "console",
+  "vercelToken": ""
 }/*EDITMODE-END*/;
 
 function App() {
@@ -104,6 +106,15 @@ function App() {
                 { value: 'compact', label: 'Compacta' },
                 { value: 'comfortable', label: 'Confortável' },
               ]}
+            />
+          </window.TweakSection>
+          <window.TweakSection title="Vercel">
+            <window.TweakText
+              label="VERCEL_TOKEN (opcional)"
+              value={tweaks.vercelToken}
+              onChange={(v) => setTweak('vercelToken', v)}
+              placeholder="vercel_..."
+              hint="Usado na aba Vercel ▲ para deploy preview. Deixe vazio para modo demo."
             />
           </window.TweakSection>
         </window.TweaksPanel>
