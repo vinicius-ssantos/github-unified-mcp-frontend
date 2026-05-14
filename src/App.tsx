@@ -3,12 +3,12 @@ import ConsoleA from './components/ConsoleA';
 
 type Mode = 'read_only' | 'write_safe' | 'operator';
 type Density = 'compact' | 'comfortable';
-type Settings = { serverUrl: string; bearerToken: string; mode: Mode; density: Density; forceError: boolean };
+type Settings = { serverUrl: string; bearerToken: string; mode: Mode; density: Density; forceError: boolean; vercelToken: string };
 
 const STORAGE_KEY = 'mcp-panel-settings';
 
 function defaultSettings(): Settings {
-  return { serverUrl: '', bearerToken: '', mode: 'read_only', density: 'compact', forceError: false };
+  return { serverUrl: '', bearerToken: '', mode: 'read_only', density: 'compact', forceError: false, vercelToken: '' };
 }
 
 function loadSettings(): Settings {
@@ -52,6 +52,7 @@ export function App() {
         forceError={settings.forceError}
         serverUrl={settings.serverUrl}
         bearerToken={settings.bearerToken}
+        vercelToken={settings.vercelToken}
       />
 
       <button
@@ -71,6 +72,10 @@ export function App() {
 
             <Field label="Bearer token" hint="Necessário quando MCP_AUTH_MODE=bearer">
               <input type="password" style={{ fontFamily: 'monospace', fontSize: 12, padding: '5px 8px', background: 'var(--surface-2,#1e1e1e)', border: '1px solid var(--border,#333)', borderRadius: 4, color: 'var(--text,#ccc)', width: '100%', boxSizing: 'border-box' }} value={draft.bearerToken} onChange={e => setDraft(d => ({ ...d, bearerToken: e.target.value }))} placeholder="mcp_..." />
+            </Field>
+
+            <Field label="Vercel token" hint="Opcional — para a aba Vercel ▲">
+              <input type="password" style={{ fontFamily: 'monospace', fontSize: 12, padding: '5px 8px', background: 'var(--surface-2,#1e1e1e)', border: '1px solid var(--border,#333)', borderRadius: 4, color: 'var(--text,#ccc)', width: '100%', boxSizing: 'border-box' }} value={draft.vercelToken} onChange={e => setDraft(d => ({ ...d, vercelToken: e.target.value }))} placeholder="vercel_..." />
             </Field>
 
             <Field label="Postura (demo)">
