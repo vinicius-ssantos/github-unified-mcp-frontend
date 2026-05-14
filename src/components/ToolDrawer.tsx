@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import StatusDot from './StatusDot';
 import { SERVER_STATES } from '../data/serverState';
 import { getSchema } from '../data/schemas';
@@ -8,6 +9,8 @@ type Props = {
   mode: string;
   onClose: () => void;
   onPlayground: (name: string) => void;
+  serverUrl?: string;
+  bearerToken?: string;
 };
 
 function guardChain(tool: ToolFlatEntry, state: ServerInfoFlags) {
