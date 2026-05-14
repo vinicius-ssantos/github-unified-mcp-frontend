@@ -447,9 +447,9 @@ function buildState(mode: string, forceError: boolean, liveHealth: HealthzRespon
 
 // ── ConsoleA (main) ───────────────────────────────────────────────────────────
 
-type ConsoleAProps = { mode?: string; density?: string; forceError?: boolean; serverUrl?: string; bearerToken?: string };
+type ConsoleAProps = { mode?: string; density?: string; forceError?: boolean; serverUrl?: string; bearerToken?: string; vercelToken?: string };
 
-export default function ConsoleA({ mode = "read_only", density = "compact", forceError = false, serverUrl = "", bearerToken = "" }: ConsoleAProps) {
+export default function ConsoleA({ mode = "read_only", density = "compact", forceError = false, serverUrl = "", bearerToken = "", vercelToken = "" }: ConsoleAProps) {
   const [liveHealth, setLiveHealth] = useState<HealthzResponse | null>(null);
   const [liveInfo, setLiveInfo] = useState<Partial<ServerInfoFlags> | null>(null);
   const [fetchError, setFetchError] = useState(false);
@@ -609,7 +609,7 @@ export default function ConsoleA({ mode = "read_only", density = "compact", forc
         {tab === "wizard" && <EnvWizard />}
         {tab === "playground" && <PlaygroundA serverUrl={serverUrl} mode={mode} initialTool={playgroundTool} bearerToken={bearerToken} />}
         {tab === "pr" && <PrReadyA serverUrl={serverUrl} mode={mode} bearerToken={bearerToken} />}
-        {tab === "vercel" && <VercelDeployTab serverUrl={serverUrl} bearerToken={bearerToken} />}
+        {tab === "vercel" && <VercelDeployTab serverUrl={serverUrl} bearerToken={vercelToken || bearerToken} />}
       </div>
 
       {activeTool && <ToolDrawer tool={activeTool} mode={mode} onClose={() => setOpenTool("")} onPlayground={name => { setPlaygroundTool(name); setTab("playground"); setOpenTool(""); }} />}
