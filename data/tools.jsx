@@ -105,6 +105,23 @@ const TOOL_CATALOG = [
       { name: "ci_gate_check", summary: "Gate de CI antes de merge (em desenvolvimento)", risk: "low", planned: true },
     ],
   },
+  {
+    phase: "Actions & Artifacts — Fase 7",
+    description: "Listagem, download e extração de artifacts de workflow.",
+    tools: [
+      { name: "artifact_extract_to_branch", summary: "Extrai arquivos de artifact e commita em branch não protegida", risk: "medium" },
+    ],
+  },
+  {
+    phase: "Utilitários — Fase 8",
+    description: "Ferramentas de diagnóstico, refactor guiado e orquestração. Não chamam a API do GitHub diretamente.",
+    tools: [
+      { name: "noop_write_probe", summary: "Probe write-classified sem efeito real — diagnóstico de gate do host MCP", risk: "low" },
+      { name: "knowledge_search", summary: "Busca lexical local na documentação do servidor MCP", risk: "low" },
+      { name: "refactor_slice_branch_create", summary: "Cria branch para um slice aprovado de refactor sem editar arquivos", risk: "medium" },
+      { name: "refactor_slice_draft_pr_create", summary: "Abre PR draft para um slice aprovado de refactor sem editar arquivos", risk: "medium" },
+    ],
+  },
 ];
 
 window.TOOL_CATALOG = TOOL_CATALOG;
