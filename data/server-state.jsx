@@ -6,9 +6,9 @@ const SERVER_STATES = {
     healthz: {
       ok: true,
       service: "github-unified-mcp",
-      version: "0.1.0",
-      tool_schema_version: "2026-05-02.1",
-      commit_sha: "7ff00f7",
+      version: "1.31.1",
+      tool_schema_version: "2026-05-14.1",
+      commit_sha: "bb13cea",
       uptime_seconds: 184_223,
     },
     server_info: {
@@ -30,9 +30,9 @@ const SERVER_STATES = {
     healthz: {
       ok: true,
       service: "github-unified-mcp",
-      version: "0.1.0",
-      tool_schema_version: "2026-05-02.1",
-      commit_sha: "7ff00f7",
+      version: "1.31.1",
+      tool_schema_version: "2026-05-14.1",
+      commit_sha: "bb13cea",
       uptime_seconds: 184_223,
     },
     server_info: {
@@ -54,9 +54,9 @@ const SERVER_STATES = {
     healthz: {
       ok: true,
       service: "github-unified-mcp",
-      version: "0.1.0",
-      tool_schema_version: "2026-05-02.1",
-      commit_sha: "7ff00f7",
+      version: "1.31.1",
+      tool_schema_version: "2026-05-14.1",
+      commit_sha: "bb13cea",
       uptime_seconds: 184_223,
     },
     server_info: {
@@ -88,16 +88,16 @@ const ENV_CONFIG = {
 };
 
 const AUDIT_EVENTS = [
-  { ts: "2026-05-06 14:22:11", actor: "chatgpt-connector", tool: "pr_get", target: "github-unified-mcp#142", decision: "allowed", level: "info" },
-  { ts: "2026-05-06 14:22:09", actor: "chatgpt-connector", tool: "repo_tree", target: "github-unified-mcp@main", decision: "allowed", level: "info" },
-  { ts: "2026-05-06 14:21:47", actor: "claude-mcp", tool: "pr_merge", target: "github-unified-mcp#138", decision: "blocked", level: "warn", reason: "dangerous_tools_disabled" },
-  { ts: "2026-05-06 14:18:02", actor: "chatgpt-connector", tool: "file_apply_patch", target: "github-unified-mcp@feat/policy-43", decision: "allowed", level: "info" },
-  { ts: "2026-05-06 14:17:33", actor: "chatgpt-connector", tool: "branch_create", target: "github-unified-mcp@feat/policy-43", decision: "allowed", level: "info" },
-  { ts: "2026-05-06 14:11:08", actor: "inspector-local", tool: "actions_run_workflow", target: "ci.yml", decision: "blocked", level: "warn", reason: "workflow_dispatch_disabled" },
-  { ts: "2026-05-06 14:02:55", actor: "chatgpt-connector", tool: "issue_comment", target: "github-unified-mcp#65", decision: "allowed", level: "info" },
-  { ts: "2026-05-06 13:58:21", actor: "chatgpt-connector", tool: "pr_get_diff", target: "github-unified-mcp#142", decision: "allowed", level: "info" },
-  { ts: "2026-05-06 13:54:02", actor: "unknown-ip", tool: "/oauth/token", target: "—", decision: "rate_limited", level: "warn", reason: "rate_limit_exceeded" },
-  { ts: "2026-05-06 13:50:14", actor: "claude-mcp", tool: "git_update_ref", target: "main", decision: "blocked", level: "error", reason: "protected_branch" },
+  { ts: "2026-05-14 23:06:03", actor: "claude-mcp", tool: "ref_get", target: "github-unified-mcp@main", decision: "allowed", level: "info" },
+  { ts: "2026-05-14 22:52:08", actor: "claude-mcp", tool: "file_patch_preview", target: "github-unified-mcp@feat/fix", decision: "allowed", level: "info" },
+  { ts: "2026-05-14 22:36:16", actor: "claude-mcp", tool: "branch_create", target: "github-unified-mcp@feat/vercel-deploy-tab", decision: "allowed", level: "info" },
+  { ts: "2026-05-14 22:35:51", actor: "claude-mcp", tool: "file_apply_patch", target: "github-unified-mcp@feat/vercel-deploy-tab", decision: "allowed", level: "info" },
+  { ts: "2026-05-14 22:35:21", actor: "claude-mcp", tool: "file_create_or_update", target: "github-unified-mcp@feat/vercel-deploy-tab", decision: "allowed", level: "info" },
+  { ts: "2026-05-14 14:22:11", actor: "chatgpt-connector", tool: "pr_get", target: "github-unified-mcp#142", decision: "allowed", level: "info" },
+  { ts: "2026-05-14 14:21:47", actor: "claude-mcp", tool: "pr_merge", target: "github-unified-mcp#138", decision: "blocked", level: "warn", reason: "dangerous_tools_disabled" },
+  { ts: "2026-05-14 14:11:08", actor: "inspector-local", tool: "actions_run_workflow", target: "ci.yml", decision: "blocked", level: "warn", reason: "workflow_dispatch_disabled" },
+  { ts: "2026-05-14 13:54:02", actor: "unknown-ip", tool: "/oauth/token", target: "—", decision: "rate_limited", level: "warn", reason: "rate_limit_exceeded" },
+  { ts: "2026-05-14 13:50:14", actor: "claude-mcp", tool: "git_update_ref", target: "main", decision: "blocked", level: "error", reason: "protected_branch" },
 ];
 
 const RATE_LIMITS = [
