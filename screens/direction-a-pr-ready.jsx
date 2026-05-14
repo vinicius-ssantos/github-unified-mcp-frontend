@@ -64,7 +64,7 @@ function riskStyle(level) {
   return map[level] || map.low;
 }
 
-function PrReadyA({ serverUrl }) {
+function PrReadyA({ serverUrl, bearerToken = "" }) {
   const { useState } = React;
   const isDemo = !serverUrl;
 
@@ -76,9 +76,10 @@ function PrReadyA({ serverUrl }) {
   const [error,   setError]   = useState(null);
 
   const callTool = async (name, args) => {
+    const authHeaders = bearerToken ? { "Authorization": `Bearer ${bearerToken}` } : {};
     const resp = await fetch(`${serverUrl}/mcp`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...authHeaders },
       body: JSON.stringify({ jsonrpc: "2.0", id: Date.now(), method: "tools/call", params: { name, arguments: args } }),
       signal: AbortSignal.timeout(8000),
     });
