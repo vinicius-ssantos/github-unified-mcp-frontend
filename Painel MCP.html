@@ -23,23 +23,33 @@
 <script type="text/babel" src="tweaks-panel.jsx"></script>
 <script type="text/babel" src="screens/direction-a-drawer.jsx"></script>
 <script type="text/babel" src="screens/direction-a-wizard.jsx"></script>
+<script type="text/babel" src="screens/direction-a-playground.jsx"></script>
 <script type="text/babel" src="screens/direction-a.jsx"></script>
+<script type="text/babel" src="screens/direction-a-pr-ready.jsx"></script>
+<script type="text/babel" src="screens/direction-b.jsx"></script>
 
 <script type="text/babel">
 const DEFAULTS = /*EDITMODE-BEGIN*/{
   "mode": "read_only",
   "density": "compact",
   "errorState": false,
-  "serverUrl": ""
+  "serverUrl": "",
+  "view": "console"
 }/*EDITMODE-END*/;
 
 function App() {
   const [tweaks, setTweak] = window.useTweaks ? window.useTweaks(DEFAULTS) : [DEFAULTS, () => {}];
   const ConsoleA = window.ConsoleA;
+  const PanelB = window.PanelB;
 
   return (
     <>
-      <ConsoleA mode={tweaks.mode} density={tweaks.density} forceError={tweaks.errorState} serverUrl={tweaks.serverUrl} />
+      {tweaks.view === "calm" && PanelB
+        ? <PanelB mode={tweaks.mode} />
+        : ConsoleA
+          ? <ConsoleA mode={tweaks.mode} density={tweaks.density} forceError={tweaks.errorState} serverUrl={tweaks.serverUrl} />
+          : <div style={{color:'var(--text)',padding:40,fontFamily:'monospace'}}>Carregando…</div>
+      }
 
       {window.TweaksPanel && (
         <window.TweaksPanel>
@@ -68,9 +78,18 @@ function App() {
               hint="healthz=503, /oauth/token rate-limited"
             />
           </window.TweakSection>
-          <window.TweakSection title="Densidade">
+          <window.TweakSection title="Aparência">
             <window.TweakRadio
-              label="Linhas"
+              label="Layout"
+              value={tweaks.view}
+              onChange={(v) => setTweak('view', v)}
+              options={[
+                { value: 'console', label: 'Console' },
+                { value: 'calm', label: 'Calm' },
+              ]}
+            />
+            <window.TweakRadio
+              label="Densidade"
               value={tweaks.density}
               onChange={(v) => setTweak('density', v)}
               options={[

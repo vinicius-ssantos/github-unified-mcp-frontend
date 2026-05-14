@@ -16,7 +16,7 @@ function guardChain(tool, state) {
   return chain;
 }
 
-function ToolDrawer({ tool, mode, onClose }) {
+function ToolDrawer({ tool, mode, onClose, onPlayground }) {
   if (!tool) return null;
   const state = window.SERVER_STATES[mode];
   const schema = window.getSchema(tool.name);
@@ -47,6 +47,14 @@ function ToolDrawer({ tool, mode, onClose }) {
               color: tool.risk === "low" ? "var(--ok)" : tool.risk === "medium" ? "var(--warn)" : "var(--danger)",
               borderColor: tool.risk === "low" ? "rgba(120,200,160,0.30)" : tool.risk === "medium" ? "rgba(220,180,100,0.30)" : "rgba(230,120,110,0.30)",
             }}>{tool.risk === "medium" ? "med" : tool.risk}</span>
+            {tool.risk === "low" && onPlayground && (
+              <button
+                className="ca-copy"
+                style={{ color: "var(--ok)", borderColor: "color-mix(in oklch, var(--ok) 35%, transparent)", padding: "4px 10px", fontSize: 11 }}
+                onClick={() => onPlayground(tool.name)}
+                title="Abrir no Playground"
+              >▶ playground</button>
+            )}
             <button className="ca-drawer-close" onClick={onClose} aria-label="Fechar">×</button>
           </div>
         </header>

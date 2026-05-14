@@ -92,6 +92,201 @@ const TOOL_SCHEMAS = {
   },
 };
 
+// Extended schemas
+Object.assign(TOOL_SCHEMAS, {
+  stack_detect: {
+    inputs: [
+      { name: "owner", type: "string", required: true },
+      { name: "repo", type: "string", required: true },
+      { name: "ref", type: "string", required: false, default: "default_branch" },
+    ],
+    example: { name: "stack_detect", arguments: { owner: "vinicius-ssantos", repo: "github-unified-mcp" } },
+    returns: "stacks[], manifest_files[], entrypoints[]",
+  },
+  repo_context_atlas: {
+    inputs: [
+      { name: "owner", type: "string", required: true },
+      { name: "repo", type: "string", required: true },
+    ],
+    example: { name: "repo_context_atlas", arguments: { owner: "vinicius-ssantos", repo: "github-unified-mcp" } },
+    returns: "stacks, risk_summary, open_prs, open_issues, protected_branches",
+  },
+  issue_get: {
+    inputs: [
+      { name: "owner", type: "string", required: true },
+      { name: "repo", type: "string", required: true },
+      { name: "issue_number", type: "integer", required: true },
+    ],
+    example: { name: "issue_get", arguments: { owner: "vinicius-ssantos", repo: "github-unified-mcp", issue_number: 142 } },
+    returns: "issue object: number, title, state, labels, body, comments",
+  },
+  issue_list: {
+    inputs: [
+      { name: "owner", type: "string", required: true },
+      { name: "repo", type: "string", required: true },
+      { name: "state", type: "enum: open|closed|all", required: false, default: "open" },
+      { name: "labels", type: "string (csv)", required: false },
+      { name: "per_page", type: "integer", required: false, default: "30" },
+    ],
+    example: { name: "issue_list", arguments: { owner: "vinicius-ssantos", repo: "github-unified-mcp", state: "open" } },
+    returns: "issue[] — number, title, state, labels",
+  },
+  pr_get: {
+    inputs: [
+      { name: "owner", type: "string", required: true },
+      { name: "repo", type: "string", required: true },
+      { name: "pull_number", type: "integer", required: true },
+    ],
+    example: { name: "pr_get", arguments: { owner: "vinicius-ssantos", repo: "github-unified-mcp", pull_number: 138 } },
+    returns: "PR object: number, title, state, mergeable, mergeable_state, head_sha",
+  },
+  pr_list: {
+    inputs: [
+      { name: "owner", type: "string", required: true },
+      { name: "repo", type: "string", required: true },
+      { name: "state", type: "enum: open|closed|all", required: false, default: "open" },
+      { name: "base", type: "string", required: false, note: "filtrar por branch base" },
+      { name: "per_page", type: "integer", required: false, default: "30" },
+    ],
+    example: { name: "pr_list", arguments: { owner: "vinicius-ssantos", repo: "github-unified-mcp", state: "open" } },
+    returns: "PR[] — number, title, state, draft, head_sha",
+  },
+  actions_list_runs: {
+    inputs: [
+      { name: "owner", type: "string", required: true },
+      { name: "repo", type: "string", required: true },
+      { name: "workflow_id", type: "string|integer", required: false },
+      { name: "branch", type: "string", required: false },
+      { name: "per_page", type: "integer", required: false, default: "10" },
+    ],
+    example: { name: "actions_list_runs", arguments: { owner: "vinicius-ssantos", repo: "github-unified-mcp" } },
+    returns: "workflow_runs[]: id, name, status, conclusion, head_branch",
+  },
+  actions_get_run: {
+    inputs: [
+      { name: "owner", type: "string", required: true },
+      { name: "repo", type: "string", required: true },
+      { name: "run_id", type: "integer", required: true },
+    ],
+    example: { name: "actions_get_run", arguments: { owner: "vinicius-ssantos", repo: "github-unified-mcp", run_id: 9001 } },
+    returns: "run object: id, status, conclusion, created_at, html_url",
+  },
+  actions_get_jobs: {
+    inputs: [
+      { name: "owner", type: "string", required: true },
+      { name: "repo", type: "string", required: true },
+      { name: "run_id", type: "integer", required: true },
+    ],
+    example: { name: "actions_get_jobs", arguments: { owner: "vinicius-ssantos", repo: "github-unified-mcp", run_id: 9001 } },
+    returns: "jobs[]: id, name, status, conclusion, steps[]",
+  },
+  actions_get_job_logs: {
+    inputs: [
+      { name: "owner", type: "string", required: true },
+      { name: "repo", type: "string", required: true },
+      { name: "job_id", type: "integer", required: true },
+    ],
+    example: { name: "actions_get_job_logs", arguments: { owner: "vinicius-ssantos", repo: "github-unified-mcp", job_id: 1 } },
+    returns: "log text (truncated, bounded output)",
+  },
+  compare_commits: {
+    inputs: [
+      { name: "owner", type: "string", required: true },
+      { name: "repo", type: "string", required: true },
+      { name: "base", type: "string", required: true, note: "sha, tag ou branch base" },
+      { name: "head", type: "string", required: true, note: "sha, tag ou branch head" },
+    ],
+    example: { name: "compare_commits", arguments: { owner: "vinicius-ssantos", repo: "github-unified-mcp", base: "main", head: "feat/policy-43" } },
+    returns: "ahead_by, behind_by, status, files[]",
+  },
+  pr_get_diff: {
+    inputs: [
+      { name: "owner", type: "string", required: true },
+      { name: "repo", type: "string", required: true },
+      { name: "pull_number", type: "integer", required: true },
+    ],
+    example: { name: "pr_get_diff", arguments: { owner: "vinicius-ssantos", repo: "github-unified-mcp", pull_number: 138 } },
+    returns: "diff string (bounded, sem tokens)",
+  },
+  pr_get_patch: {
+    inputs: [
+      { name: "owner", type: "string", required: true },
+      { name: "repo", type: "string", required: true },
+      { name: "pull_number", type: "integer", required: true },
+    ],
+    example: { name: "pr_get_patch", arguments: { owner: "vinicius-ssantos", repo: "github-unified-mcp", pull_number: 138 } },
+    returns: "patch no formato git",
+  },
+  pr_list_changed_files: {
+    inputs: [
+      { name: "owner", type: "string", required: true },
+      { name: "repo", type: "string", required: true },
+      { name: "pull_number", type: "integer", required: true },
+    ],
+    example: { name: "pr_list_changed_files", arguments: { owner: "vinicius-ssantos", repo: "github-unified-mcp", pull_number: 138 } },
+    returns: "files[]: filename, status, additions, deletions",
+  },
+  pr_risk_review: {
+    inputs: [
+      { name: "owner", type: "string", required: true },
+      { name: "repo", type: "string", required: true },
+      { name: "pull_number", type: "integer", required: true },
+    ],
+    example: { name: "pr_risk_review", arguments: { owner: "vinicius-ssantos", repo: "github-unified-mcp", pull_number: 138 } },
+    returns: "risk_level (low|medium|high), summary, checklist[]",
+  },
+  project_get: {
+    inputs: [
+      { name: "owner", type: "string", required: true },
+      { name: "project_number", type: "integer", required: true },
+    ],
+    example: { name: "project_get", arguments: { owner: "vinicius-ssantos", project_number: 1 } },
+    returns: "project: id, title, number, items_count",
+  },
+  project_list_fields: {
+    inputs: [
+      { name: "owner", type: "string", required: true },
+      { name: "project_number", type: "integer", required: true },
+    ],
+    example: { name: "project_list_fields", arguments: { owner: "vinicius-ssantos", project_number: 1 } },
+    returns: "fields[]: name, type, options[]",
+  },
+  project_list_items: {
+    inputs: [
+      { name: "owner", type: "string", required: true },
+      { name: "project_number", type: "integer", required: true },
+      { name: "per_page", type: "integer", required: false, default: "20" },
+    ],
+    example: { name: "project_list_items", arguments: { owner: "vinicius-ssantos", project_number: 1 } },
+    returns: "items[]: title, status, assignees, field_values",
+  },
+  project_list_views: {
+    inputs: [
+      { name: "owner", type: "string", required: true },
+      { name: "project_number", type: "integer", required: true },
+    ],
+    example: { name: "project_list_views", arguments: { owner: "vinicius-ssantos", project_number: 1 } },
+    returns: "views[]: name, layout",
+  },
+  write_preflight_check: {
+    inputs: [
+      { name: "owner", type: "string", required: true },
+      { name: "repo", type: "string", required: true },
+      { name: "operation", type: "string", required: true, note: "ex: file_create_or_update" },
+      { name: "target_branch", type: "string", required: false },
+    ],
+    example: { name: "write_preflight_check", arguments: { owner: "vinicius-ssantos", repo: "github-unified-mcp", operation: "file_create_or_update", target_branch: "feat/new" } },
+    returns: "decision (allowed|blocked), risk, reason",
+  },
+  injection_detect: {
+    inputs: [
+      { name: "text", type: "string", required: true, note: "texto de resposta da API a verificar" },
+    ],
+    example: { name: "injection_detect", arguments: { text: "Sample API response text to check for injection patterns." } },
+    returns: "detected: bool, patterns_checked, safe: bool",
+  },
+});
+
 // Default schema for tools we didn't enumerate explicitly.
 function getSchema(name) {
   return TOOL_SCHEMAS[name] || {
