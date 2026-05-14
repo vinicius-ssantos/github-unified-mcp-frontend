@@ -18,9 +18,13 @@ const TOOL_CATALOG = [
     tools: [
       { name: "repo_get", summary: "Metadados de um repositório", risk: "low" },
       { name: "repo_tree", summary: "Árvore de arquivos em um ref", risk: "low" },
+      { name: "repo_search_code", summary: "Busca código por string ou símbolo no repositório", risk: "low" },
+      { name: "ref_get", summary: "Resolve um ref Git para seu SHA atual (heads/tags/SHA)", risk: "low" },
       { name: "file_get", summary: "Conteúdo de um arquivo", risk: "low" },
+      { name: "file_patch_preview", summary: "Pré-visualiza substituições de texto sem commitar — retorna operation_id", risk: "low" },
       { name: "issue_get", summary: "Issue por número", risk: "low" },
       { name: "issue_list", summary: "Listagem com filtros", risk: "low" },
+      { name: "label_list", summary: "Lista labels do repositório", risk: "low" },
       { name: "pr_get", summary: "PR por número", risk: "low" },
       { name: "pr_list", summary: "Listagem de PRs", risk: "low" },
       { name: "actions_list_runs", summary: "Workflow runs recentes", risk: "low" },
@@ -39,6 +43,9 @@ const TOOL_CATALOG = [
       { name: "issue_create", summary: "Abre issue (recusa em read-only)", risk: "medium" },
       { name: "issue_update", summary: "Atualiza issue existente", risk: "medium" },
       { name: "issue_comment", summary: "Comenta em issue/PR", risk: "medium" },
+      { name: "issue_add_labels", summary: "Adiciona labels a uma issue ou PR", risk: "medium" },
+      { name: "issue_remove_label", summary: "Remove label de uma issue ou PR", risk: "medium" },
+      { name: "file_patch_commit_prepared", summary: "Commita operação preparada por file_patch_preview via operation_id", risk: "medium" },
       { name: "pr_create", summary: "Abre pull request", risk: "medium" },
       { name: "pr_update", summary: "Atualiza título/corpo/branch base", risk: "medium" },
       { name: "pr_merge", summary: "Merge — exige confirm + dangerous_tools", risk: "high", requiresConfirm: true, requiresDangerous: true },
@@ -96,6 +103,23 @@ const TOOL_CATALOG = [
       { name: "write_preflight_check", summary: "Decisão estruturada de escrita (sem chamar GitHub)", risk: "low" },
       { name: "injection_detect", summary: "Padrões de prompt injection em respostas", risk: "low" },
       { name: "ci_gate_check", summary: "Gate de CI antes de merge (em desenvolvimento)", risk: "low", planned: true },
+    ],
+  },
+  {
+    phase: "Actions & Artifacts — Fase 7",
+    description: "Listagem, download e extração de artifacts de workflow.",
+    tools: [
+      { name: "artifact_extract_to_branch", summary: "Extrai arquivos de artifact e commita em branch não protegida", risk: "medium" },
+    ],
+  },
+  {
+    phase: "Utilitários — Fase 8",
+    description: "Ferramentas de diagnóstico, refactor guiado e orquestração. Não chamam a API do GitHub diretamente.",
+    tools: [
+      { name: "noop_write_probe", summary: "Probe write-classified sem efeito real — diagnóstico de gate do host MCP", risk: "low" },
+      { name: "knowledge_search", summary: "Busca lexical local na documentação do servidor MCP", risk: "low" },
+      { name: "refactor_slice_branch_create", summary: "Cria branch para um slice aprovado de refactor sem editar arquivos", risk: "medium" },
+      { name: "refactor_slice_draft_pr_create", summary: "Abre PR draft para um slice aprovado de refactor sem editar arquivos", risk: "medium" },
     ],
   },
 ];
