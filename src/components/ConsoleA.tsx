@@ -526,7 +526,7 @@ export default function ConsoleA({ mode = "read_only", density = "compact", forc
       if (e.key === "g") { gPressedRef.current = Date.now(); return; }
       const within = Date.now() - gPressedRef.current < 800;
       if (within) {
-        const map: Record<string, string> = { o:"overview", t:"tools", s:"security", a:"audit", r:"runbook", p:"playground", b:"pr", e:"wizard" };
+        const map: Record<string, string> = { o:"overview", t:"tools", s:"security", a:"audit", r:"runbook", p:"playground", b:"pr", e:"wizard", v:"vercel" };
         if (map[e.key]) { setTab(map[e.key]); gPressedRef.current = 0; }
       }
     };
@@ -593,7 +593,7 @@ export default function ConsoleA({ mode = "read_only", density = "compact", forc
       </header>
 
       <nav className="ca-tabs">
-        {([["overview","Overview","o"],["tools",`Tool catalog · ${totals.all}`,"t"],["security","Security posture","s"],["audit","Audit log","a"],["runbook","Runbook","r"],["playground","Playground ▶","p"],["pr","PR Readiness","b"],["wizard",".env wizard","e"]] as [string,string,string][]).map(([k,label,key]) => (
+        {([["overview","Overview","o"],["tools",`Tool catalog · ${totals.all}`,"t"],["security","Security posture","s"],["audit","Audit log","a"],["runbook","Runbook","r"],["playground","Playground ▶","p"],["pr","PR Readiness","b"],["wizard",".env wizard","e"],["vercel","Vercel ▲","v"]] as [string,string,string][]).map(([k,label,key]) => (
           <button key={k} onClick={() => setTab(k)} className={`ca-tab ${tab === k ? "is-active" : ""}`}>{label}<span className="ca-tab-key mono">g{key}</span></button>
         ))}
         <div className="ca-tabs-spacer" />
@@ -609,6 +609,7 @@ export default function ConsoleA({ mode = "read_only", density = "compact", forc
         {tab === "wizard" && <EnvWizard />}
         {tab === "playground" && <PlaygroundA serverUrl={serverUrl} mode={mode} initialTool={playgroundTool} bearerToken={bearerToken} />}
         {tab === "pr" && <PrReadyA serverUrl={serverUrl} mode={mode} bearerToken={bearerToken} />}
+        {tab === "vercel" && <VercelDeployTab serverUrl={serverUrl} bearerToken={bearerToken} />}
       </div>
 
       {activeTool && <ToolDrawer tool={activeTool} mode={mode} onClose={() => setOpenTool("")} onPlayground={name => { setPlaygroundTool(name); setTab("playground"); setOpenTool(""); }} />}
@@ -618,7 +619,7 @@ export default function ConsoleA({ mode = "read_only", density = "compact", forc
           <div className="ca-help-modal" onClick={e => e.stopPropagation()}>
             <div className="ca-help-title">atalhos de teclado</div>
             <div className="ca-help-grid">
-              {([[[" g","o"],"Overview"],[["g","t"],"Tool catalog"],[["g","s"],"Security"],[["g","a"],"Audit log"],[["g","r"],"Runbook"],[["g","p"],"Playground"],[["g","b"],"PR Readiness"],[["g","e"],".env wizard"]] as [string[], string][]).map(([keys,label]) => (
+              {([[[" g","o"],"Overview"],[["g","t"],"Tool catalog"],[["g","s"],"Security"],[["g","a"],"Audit log"],[["g","r"],"Runbook"],[["g","p"],"Playground"],[["g","b"],"PR Readiness"],[["g","e"],".env wizard"],[["g","v"],"Vercel Deploy"]] as [string[], string][]).map(([keys,label]) => (
                 <div key={label} className="ca-help-row">
                   <div className="ca-help-keys">{keys.map((k,i) => <span key={i}><span className="ca-kbd">{k.trim()}</span>{i < keys.length-1 && <span style={{color:"var(--text-muted)",fontSize:10}}>+</span>}</span>)}</div>
                   <span className="ca-help-desc">{label}</span>
