@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import StatusDot from './StatusDot';
 import { SERVER_STATES } from '../data/serverState';
 import { getSchema } from '../data/schemas';
@@ -8,6 +9,8 @@ type Props = {
   mode: string;
   onClose: () => void;
   onPlayground: (name: string) => void;
+  serverUrl?: string;
+  bearerToken?: string;
 };
 
 function guardChain(tool: ToolFlatEntry, state: ServerInfoFlags) {
@@ -54,7 +57,7 @@ export default function ToolDrawer({ tool, mode, onClose, onPlayground }: Props)
           </div>
           <div className="ca-drawer-h-r">
             <span className="ca-risk" style={{ background: r.bg, color: r.color, borderColor: r.border }}>{r.label}</span>
-            {tool.risk === "low" && (
+            {!tool.planned && (
               <button
                 className="ca-copy"
                 style={{ color: "var(--ok)", borderColor: "color-mix(in oklch, var(--ok) 35%, transparent)", padding: "4px 10px", fontSize: 11 }}
