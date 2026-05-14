@@ -17,9 +17,13 @@ export const TOOL_CATALOG: ToolGroup[] = [
     tools: [
       { name: "repo_get", summary: "Metadados de um repositório", risk: "low" },
       { name: "repo_tree", summary: "Árvore de arquivos em um ref", risk: "low" },
+      { name: "repo_search_code", summary: "Busca código por string ou símbolo no repositório", risk: "low" },
+      { name: "ref_get", summary: "Resolve um ref Git para seu SHA atual (heads/tags/SHA)", risk: "low" },
       { name: "file_get", summary: "Conteúdo de um arquivo", risk: "low" },
+      { name: "file_patch_preview", summary: "Pré-visualiza substituições de texto sem commitar — retorna operation_id", risk: "low" },
       { name: "issue_get", summary: "Issue por número", risk: "low" },
       { name: "issue_list", summary: "Listagem com filtros", risk: "low" },
+      { name: "label_list", summary: "Lista labels do repositório", risk: "low" },
       { name: "pr_get", summary: "PR por número", risk: "low" },
       { name: "pr_list", summary: "Listagem de PRs", risk: "low" },
       { name: "actions_list_runs", summary: "Workflow runs recentes", risk: "low" },
