@@ -280,6 +280,128 @@ const TOOL_SCHEMAS: Record<string, ToolSchema> = {
     example: { name: "injection_detect", arguments: { text: "Sample API response text to check for injection patterns." } },
     returns: "detected: bool, patterns_checked, safe: bool",
   },
+  ref_get: {
+    inputs: [
+      { name: "owner", type: "string", required: true },
+      { name: "repo", type: "string", required: true },
+      { name: "ref", type: "string", required: true, note: "ex: refs/heads/main ou heads/main" },
+    ],
+    example: { name: "ref_get", arguments: { owner: "vinicius-ssantos", repo: "github-unified-mcp", ref: "refs/heads/main" } },
+    returns: "ref, object: { sha, type }",
+  },
+  repo_search_code: {
+    inputs: [
+      { name: "owner", type: "string", required: true },
+      { name: "repo", type: "string", required: true },
+      { name: "query", type: "string", required: true, note: "string ou símbolo a buscar" },
+      { name: "per_page", type: "integer", required: false, default: "20" },
+    ],
+    example: { name: "repo_search_code", arguments: { owner: "vinicius-ssantos", repo: "github-unified-mcp", query: "GITHUB_READ_ONLY" } },
+    returns: "items[]: path, html_url, text_matches[]",
+  },
+  label_list: {
+    inputs: [
+      { name: "owner", type: "string", required: true },
+      { name: "repo", type: "string", required: true },
+      { name: "per_page", type: "integer", required: false, default: "30" },
+    ],
+    example: { name: "label_list", arguments: { owner: "vinicius-ssantos", repo: "github-unified-mcp" } },
+    returns: "labels[]: name, color, description",
+  },
+  file_patch_preview: {
+    inputs: [
+      { name: "owner", type: "string", required: true },
+      { name: "repo", type: "string", required: true },
+      { name: "path", type: "string", required: true },
+      { name: "branch", type: "string", required: true },
+      { name: "replacements", type: "array<{old,new}>", required: true, note: "cada old deve aparecer exatamente uma vez" },
+      { name: "dry_run", type: "boolean", required: false, default: "false" },
+    ],
+    example: { name: "file_patch_preview", arguments: { owner: "vinicius-ssantos", repo: "github-unified-mcp", path: "src/guard.py", branch: "feat/fix", replacements: [{ old: "old text", new: "new text" }] } },
+    returns: "operation_id, expected_sha, ready_to_commit, preview_snippets[]",
+  },
+  file_patch_commit_prepared: {
+    inputs: [
+      { name: "owner", type: "string", required: true },
+      { name: "repo", type: "string", required: true },
+      { name: "operation_id", type: "string", required: true, note: "retornado por file_patch_preview" },
+      { name: "message", type: "string", required: true },
+    ],
+    example: { name: "file_patch_commit_prepared", arguments: { owner: "vinicius-ssantos", repo: "github-unified-mcp", operation_id: "op_abc123", message: "fix: apply patch" } },
+    returns: "ok, path, branch, sha, committed",
+  },
+  issue_add_labels: {
+    inputs: [
+      { name: "owner", type: "string", required: true },
+      { name: "repo", type: "string", required: true },
+      { name: "issue_number", type: "integer", required: true },
+      { name: "labels", type: "array<string>", required: true },
+    ],
+    example: { name: "issue_add_labels", arguments: { owner: "vinicius-ssantos", repo: "github-unified-mcp", issue_number: 42, labels: ["bug", "priority:high"] } },
+    returns: "labels[] after update",
+  },
+  issue_remove_label: {
+    inputs: [
+      { name: "owner", type: "string", required: true },
+      { name: "repo", type: "string", required: true },
+      { name: "issue_number", type: "integer", required: true },
+      { name: "label", type: "string", required: true },
+    ],
+    example: { name: "issue_remove_label", arguments: { owner: "vinicius-ssantos", repo: "github-unified-mcp", issue_number: 42, label: "needs-triage" } },
+    returns: "204 no content",
+  },
+  artifact_extract_to_branch: {
+    inputs: [
+      { name: "owner", type: "string", required: true },
+      { name: "repo", type: "string", required: true },
+      { name: "artifact_id", type: "integer", required: true },
+      { name: "branch", type: "string", required: true, note: "branch não protegida de destino" },
+      { name: "message", type: "string", required: true },
+      { name: "paths", type: "array<string>", required: false, note: "filtro de arquivos dentro do zip" },
+    ],
+    example: { name: "artifact_extract_to_branch", arguments: { owner: "vinicius-ssantos", repo: "github-unified-mcp", artifact_id: 12345, branch: "feat/from-artifact", message: "chore: extract build artifact" } },
+    returns: "ok, branch, committed_files[], skipped_files[], warnings[]",
+  },
+  noop_write_probe: {
+    inputs: [
+      { name: "label", type: "string", required: false, default: "probe", note: "etiqueta para auditoria" },
+    ],
+    example: { name: "noop_write_probe", arguments: { label: "test-write-access" } },
+    returns: "ok, label, timestamp, service — sem efeito real",
+  },
+  knowledge_search: {
+    inputs: [
+      { name: "query", type: "string", required: true, note: "busca lexical BM25 na documentação do servidor" },
+      { name: "max_results", type: "integer", required: false, default: "8" },
+    ],
+    example: { name: "knowledge_search", arguments: { query: "como configurar GITHUB_READ_ONLY" } },
+    returns: "results[]: path, heading, excerpt, score",
+  },
+  refactor_slice_branch_create: {
+    inputs: [
+      { name: "owner", type: "string", required: true },
+      { name: "repo", type: "string", required: true },
+      { name: "slice_id", type: "string", required: true, note: "identificador do slice aprovado" },
+      { name: "branch", type: "string", required: true },
+      { name: "base_ref", type: "string", required: false, default: "main" },
+      { name: "dry_run", type: "boolean", required: false, default: "false" },
+    ],
+    example: { name: "refactor_slice_branch_create", arguments: { owner: "vinicius-ssantos", repo: "github-unified-mcp", slice_id: "slice-01", branch: "refactor/slice-01" } },
+    returns: "ok, status, ref, sha, verified",
+  },
+  refactor_slice_draft_pr_create: {
+    inputs: [
+      { name: "owner", type: "string", required: true },
+      { name: "repo", type: "string", required: true },
+      { name: "slice_id", type: "string", required: true },
+      { name: "branch", type: "string", required: true },
+      { name: "title", type: "string", required: true },
+      { name: "body", type: "string", required: false },
+      { name: "base_ref", type: "string", required: false, default: "main" },
+    ],
+    example: { name: "refactor_slice_draft_pr_create", arguments: { owner: "vinicius-ssantos", repo: "github-unified-mcp", slice_id: "slice-01", branch: "refactor/slice-01", title: "refactor(slice-01): extract guard module" } },
+    returns: "ok, pull_request: { number, html_url, draft }",
+  },
 };
 
 const DEFAULT_SCHEMA: ToolSchema = {
