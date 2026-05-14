@@ -4,6 +4,7 @@ import ToolDrawer from './ToolDrawer';
 import EnvWizard from './EnvWizard';
 import PlaygroundA from './PlaygroundA';
 import PrReadyA from './PrReadyA';
+import VercelDeployTab from './VercelDeployTab';
 import { TOOL_CATALOG } from '../data/tools';
 import { SERVER_STATES, ENV_CONFIG, AUDIT_EVENTS, RATE_LIMITS } from '../data/serverState';
 import type { ToolFlatEntry, DriftInfo, ServerInfoFlags, HealthzResponse } from '../types/mcp';
@@ -453,6 +454,7 @@ export default function ConsoleA({ mode = "read_only", density = "compact", forc
   const [liveInfo, setLiveInfo] = useState<Partial<ServerInfoFlags> | null>(null);
   const [fetchError, setFetchError] = useState(false);
   const [liveTools, setLiveTools] = useState<string[] | null>(null);
+  const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
   const isDemo = !serverUrl || fetchError || liveHealth === null;
 
   useEffect(() => {
@@ -464,7 +466,7 @@ export default function ConsoleA({ mode = "read_only", density = "compact", forc
         const r = await fetch(`${serverUrl}/healthz`, { signal: AbortSignal.timeout(5000) });
         if (!r.ok) throw new Error("non-200");
         const data = await r.json();
-        if (!cancelled) { setLiveHealth(data); setFetchError(false); }
+        if (!cancelled) { setLiveHealth(data); setFetchError(false); setLastRefreshed(new Date()); }
       } catch { if (!cancelled) setFetchError(true); }
     };
     const fetchServerInfo = async () => {
@@ -580,6 +582,12 @@ export default function ConsoleA({ mode = "read_only", density = "compact", forc
           <div className="ca-topbar-pill"><span className="ca-pill-k">commit</span><span className="mono">{state.healthz.commit_sha}</span></div>
           <div className="ca-topbar-pill"><span className="ca-pill-k">schema</span><span className="mono">{state.healthz.tool_schema_version}</span></div>
           <div className="ca-topbar-pill"><span className="ca-pill-k">uptime</span><LiveUptime baseSeconds={state.healthz.uptime_seconds} stopped={forceError} /></div>
+          {lastRefreshed && !isDemo && (
+            <div className="ca-topbar-pill" style={{ opacity: 0.6 }}>
+              <span className="ca-pill-k">sync</span>
+              <span className="mono">{lastRefreshed.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
+            </div>
+          )}
         </div>
         <div className="ca-topbar-right"><div className={`ca-mode ca-mode-${state.posture}`}><span className="ca-mode-dot" /><span className="ca-mode-label">{state.label}</span></div></div>
       </header>
