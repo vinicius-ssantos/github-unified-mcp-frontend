@@ -6,23 +6,24 @@ test.describe('MCP console visual regression', () => {
     await page.addStyleTag({ content: `*, *::before, *::after { animation-duration: 0s !important; animation-delay: 0s !important; transition-duration: 0s !important; transition-delay: 0s !important; caret-color: transparent !important; }` });
   });
 
-  test('home console mock mode', async ({ page }) => {
+  test('home console demo mode', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByRole('heading', { name: 'MCP Console' })).toBeVisible();
+    await expect(page.getByText('github-unified-mcp', { exact: true })).toBeVisible();
     await expect(page).toHaveScreenshot('home-console-mock.png', { fullPage: true, maxDiffPixelRatio: 0.01 });
   });
 
   test('high-risk filter state', async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('combobox').selectOption('high');
-    await expect(page.getByText('pr_merge')).toBeVisible();
+    await page.getByRole('button', { name: /Tool catalog/ }).click();
+    await page.getByRole('button', { name: /^high/ }).click();
+    await expect(page.getByText('pr_merge').first()).toBeVisible();
     await expect(page).toHaveScreenshot('high-risk-filter.png', { fullPage: true, maxDiffPixelRatio: 0.01 });
   });
 
-  test('live fallback notice state', async ({ page }) => {
+  test('settings panel open state', async ({ page }) => {
     await page.goto('/');
-    await page.getByLabel('MCP URL').fill('http://127.0.0.1:9');
-    await expect(page.getByText(/Live mode failed, using mock data/i)).toBeVisible();
-    await expect(page).toHaveScreenshot('live-fallback-notice.png', { fullPage: true, maxDiffPixelRatio: 0.01 });
+    await page.getByTitle('Configurações').click({ force: true });
+    await expect(page.getByText('configurações do painel')).toBeVisible();
+    await expect(page).toHaveScreenshot('settings-panel-open.png', { fullPage: true, maxDiffPixelRatio: 0.01 });
   });
 });

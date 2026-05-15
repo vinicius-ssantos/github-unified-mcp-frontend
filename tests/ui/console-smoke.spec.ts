@@ -4,8 +4,8 @@ test.describe('MCP console UI — smoke', () => {
   test('renders demo mode with brand, DEMO badge and tool count tab', async ({ page }, testInfo) => {
     await page.goto('/');
 
-    await expect(page.getByText('github-unified-mcp')).toBeVisible();
-    await expect(page.getByText('DEMO')).toBeVisible();
+    await expect(page.getByText('github-unified-mcp', { exact: true })).toBeVisible();
+    await expect(page.getByText('DEMO', { exact: true })).toBeVisible();
 
     // Tool catalog tab shows total count
     await expect(page.getByRole('button', { name: /Tool catalog ·/ })).toBeVisible();
@@ -64,8 +64,8 @@ test.describe('MCP console UI — smoke', () => {
     await page.keyboard.press('g');
     await page.keyboard.press('a');
 
-    await expect(page.getByText('Audit log')).toBeVisible();
-    await expect(page.getByText('chatgpt-connector')).toBeVisible();
+    await expect(page.getByText('Audit log').first()).toBeVisible();
+    await expect(page.getByText('chatgpt-connector').first()).toBeVisible();
   });
 
   test('keyboard shortcut ? opens help modal and Esc closes it', async ({ page }) => {
@@ -73,7 +73,7 @@ test.describe('MCP console UI — smoke', () => {
 
     await page.keyboard.press('?');
     await expect(page.getByText('atalhos de teclado')).toBeVisible();
-    await expect(page.getByText('Tool catalog')).toBeVisible();
+    await expect(page.getByText('Tool catalog', { exact: true })).toBeVisible();
 
     await page.keyboard.press('Escape');
     await expect(page.getByText('atalhos de teclado')).not.toBeVisible();
@@ -95,7 +95,7 @@ test.describe('MCP console UI — smoke', () => {
     await page.keyboard.press('g');
     await page.keyboard.press('p');
 
-    await expect(page.getByText('playground')).toBeVisible();
+    await expect(page.getByText('playground', { exact: true })).toBeVisible();
     await expect(page.getByText(/DEMO · configure serverUrl/)).toBeVisible();
   });
 });

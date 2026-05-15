@@ -74,8 +74,8 @@ test.describe('Playground', () => {
     await page.keyboard.press('p');
 
     // Tool list sidebar
-    await expect(page.getByText('server_info')).toBeVisible();
-    await expect(page.getByText('github_get_me')).toBeVisible();
+    await expect(page.getByText('server_info').first()).toBeVisible();
+    await expect(page.getByText('github_get_me').first()).toBeVisible();
 
     // Execute button
     await expect(page.getByRole('button', { name: /executar/ })).toBeVisible();
@@ -98,7 +98,7 @@ test.describe('Playground', () => {
     await expect(page.getByText(/github-unified-mcp/)).toBeVisible();
 
     // Click another tool to clear result
-    await page.getByText('github_get_me').click();
+    await page.getByText('github_get_me').first().click();
     await expect(page.getByText('execute uma tool para ver o resultado')).toBeVisible();
   });
 });
@@ -202,8 +202,8 @@ test.describe('.env wizard tab', () => {
     await page.keyboard.press('e');
 
     await expect(page.getByText('modo resultante')).toBeVisible();
-    await expect(page.getByText('Read-only')).toBeVisible();
-    await expect(page.getByText(/GITHUB_READ_ONLY/)).toBeVisible();
+    await expect(page.locator('.ca-wiz-mode-value')).toContainText('Read-only');
+    await expect(page.getByText('GITHUB_READ_ONLY=true', { exact: true })).toBeVisible();
   });
 });
 
