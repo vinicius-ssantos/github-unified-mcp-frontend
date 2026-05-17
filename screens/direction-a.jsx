@@ -141,7 +141,7 @@ function Sparkline({ values, tone }) {
   );
 }
 
-function AuditTimeline({ events }) {
+function AuditTimeline({ events, selectedHour = null, onSelectHour = null }) {
   const bins = React.useMemo(() => {
     const nowMs = Date.now();
     const arr = Array.from({ length: 24 }, () => ({ info: 0, warn: 0, error: 0 }));
@@ -702,7 +702,7 @@ function SecurityA({ state }) {
       </div>
       <div className="ca-sec-grid">
         {layers.map((l,i) => (
-          <div key={l.name} className="ca-sec-cell">
+          <div key={l.name} className={`ca-sec-cell${l.status==="danger"?" is-failing":l.status==="warn"?" is-warn":""}`}>
             <div className="ca-sec-cell-h"><span className="mono ca-sec-cell-num">{String(i+1).padStart(2,"0")}</span><StatusDot tone={l.status} /><span className="ca-sec-cell-name">{l.name}</span></div>
             <div className="ca-sec-cell-note">{l.note}</div>
           </div>
