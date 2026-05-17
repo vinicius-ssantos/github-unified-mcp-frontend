@@ -183,6 +183,14 @@ function ToolsA({ tools, totals, riskFilter, setRiskFilter, phaseFilter, setPhas
   rowPad: string; cellFs: number; mode: string; onOpen: (t: ToolFlatEntry) => void;
   searchRef: React.RefObject<HTMLInputElement | null>; drift: DriftInfo | null;
 }) {
+  const [copiedTool, setCopiedTool] = useState<string | null>(null);
+  const copyCall = (e: React.MouseEvent, toolName: string) => {
+    e.stopPropagation();
+    const snippet = JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: toolName, arguments: {} } });
+    navigator.clipboard?.writeText(snippet);
+    setCopiedTool(toolName);
+    setTimeout(() => setCopiedTool(null), 1500);
+  };
   const phases = TOOL_CATALOG.map(p => p.phase);
   const state = SERVER_STATES[mode] ?? SERVER_STATES['read_only'];
   const willRun = (t: ToolFlatEntry) => {
@@ -242,8 +250,20 @@ function ToolsA({ tools, totals, riskFilter, setRiskFilter, phaseFilter, setPhas
               const r = RISK_TONE[t.risk];
               const w = willRun(t);
               return (
-                <tr key={t.name} onClick={() => onOpen(t)} className="ca-tools-row">
-                  <td className="mono ca-tools-name">{t.name}{t.planned && <span className="ca-tools-planned">planned</span>}</td>
+                <tr key={t.name} onClick={() => onOpen(t)} className="ca-tools-row" style={{ position: "relative" }}>
+                  <td className="mono ca-tools-name">
+                    {t.name}{t.planned && <span className="ca-tools-planned">planned</span>}
+                    <button
+                      className="ca-tools-copy"
+                      title="copy JSON-RPC call"
+                      onClick={e => copyCall(e, t.name)}
+                      style={{ marginLeft: 6, fontFamily: "monospace", fontSize: 9, padding: "1px 5px", border: "1px solid var(--border,#333)", borderRadius: 3, background: "transparent", color: copiedTool === t.name ? "var(--ok)" : "var(--text-muted)", cursor: "pointer", opacity: 0, transition: "opacity .15s" }}
+                      onMouseEnter={e => (e.currentTarget.style.opacity = "1")}
+                      onMouseLeave={e => { if (copiedTool !== t.name) e.currentTarget.style.opacity = "0"; }}
+                    >
+                      {copiedTool === t.name ? "✓" : "copy"}
+                    </button>
+                  </td>
                   <td className="ca-tools-summary">{t.summary}</td>
                   <td><span className="ca-risk" style={{ background: r.bg, color: r.fg, borderColor: r.border }}>{r.label}</span></td>
                   <td className="mono ca-tools-phase">{t.phase}</td>
@@ -278,11 +298,22 @@ function SecurityA({ state }: { state: ReturnType<typeof buildState> }) {
     { name: "Token redaction", status: "ok", note: "Tokens, secrets e PATs nunca retornam em outputs" },
     { name: "Injection detect", status: "ok", note: "Padrões em respostas GET. request_text/audit em #62/#63" },
   ];
+  const dangerCount = layers.filter(l => l.status === "danger").length;
+  const warnCount   = layers.filter(l => l.status === "warn").length;
+  const grade = dangerCount >= 2 ? "D" : dangerCount === 1 ? "C" : warnCount >= 2 ? "B" : "A";
+  const gradeColor = { A: "var(--ok)", B: "var(--info)", C: "var(--warn)", D: "var(--danger)" }[grade];
+
   return (
     <div className="ca-sec">
       <div className="ca-sec-head">
         <div className="ca-sec-head-l"><div className="ca-sec-title">Camadas de segurança</div><div className="ca-sec-sub">10 camadas independentes. Falha em qualquer uma bloqueia a operação.</div></div>
-        <div className="ca-sec-head-r mono">postura · {state.posture}</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+            <span style={{ fontFamily: "var(--font-mono)", fontSize: 28, fontWeight: 700, color: gradeColor, lineHeight: 1 }}>{grade}</span>
+            <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--text-muted)" }}>security grade</span>
+          </div>
+          <div className="ca-sec-head-r mono">postura · {state.posture}</div>
+        </div>
       </div>
       <div className="ca-sec-grid">
         {layers.map((l, i) => (
@@ -292,6 +323,52 @@ function SecurityA({ state }: { state: ReturnType<typeof buildState> }) {
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+function AuditTimeline({ events }: { events: { ts: string; level?: string; result_ok?: boolean }[] }) {
+  const hours = Array.from({ length: 24 }, (_, i) => i);
+  const buckets = useMemo(() => {
+    const b: Record<number, { ok: number; warn: number; err: number }> = {};
+    hours.forEach(h => { b[h] = { ok: 0, warn: 0, err: 0 }; });
+    events.forEach(e => {
+      const h = new Date(e.ts).getHours();
+      if (!isNaN(h)) {
+        const isErr = e.level === "error" || e.result_ok === false;
+        const isWarn = e.level === "warn";
+        if (isErr) b[h].err++;
+        else if (isWarn) b[h].warn++;
+        else b[h].ok++;
+      }
+    });
+    return b;
+  }, [events]);
+
+  const maxVal = Math.max(...hours.map(h => buckets[h].ok + buckets[h].warn + buckets[h].err), 1);
+  const w = 480, h = 48, barW = Math.floor(w / 24) - 1;
+
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <div style={{ fontSize: 11, fontFamily: "var(--font-mono)", color: "var(--text-muted)", marginBottom: 6 }}>timeline 24h · ok <span style={{ color: "var(--ok)" }}>▮</span> warn <span style={{ color: "var(--warn)" }}>▮</span> err <span style={{ color: "var(--danger)" }}>▮</span></div>
+      <svg width="100%" viewBox={`0 0 ${w} ${h}`} style={{ display: "block", height: 48 }}>
+        {hours.map(hour => {
+          const bk = buckets[hour];
+          const total = bk.ok + bk.warn + bk.err;
+          const totalH = (total / maxVal) * (h - 4);
+          const okH    = (bk.ok   / maxVal) * (h - 4);
+          const warnH  = (bk.warn / maxVal) * (h - 4);
+          const errH   = (bk.err  / maxVal) * (h - 4);
+          const x = hour * (barW + 1);
+          return (
+            <g key={hour}>
+              <rect x={x} y={h - okH}   width={barW} height={okH}   fill="var(--ok,#4caf50)"   opacity={0.6} />
+              <rect x={x} y={h - okH - warnH} width={barW} height={warnH} fill="var(--warn,#f0b429)" opacity={0.6} />
+              <rect x={x} y={h - totalH} width={barW} height={errH}  fill="var(--danger,#ef5350)" opacity={0.6} />
+            </g>
+          );
+        })}
+      </svg>
     </div>
   );
 }
@@ -317,6 +394,42 @@ function AuditA({ rowPad, cellFs, liveEvents, isLive }: { rowPad: string; cellFs
   const total = isLive ? events.length : mockEvents.length;
   const filtered = isLive ? filteredLive.length : filteredMock.length;
 
+  const allEventsForTimeline = useMemo(() =>
+    isLive
+      ? events.map(e => ({ ts: e.ts, result_ok: e.result_ok }))
+      : mockEvents.map(e => ({ ts: e.ts, level: e.level })),
+    [isLive, events, mockEvents]
+  );
+
+  const actorCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    (isLive ? events : mockEvents).forEach(e => {
+      const key = isLive ? (e as BffAuditEvent).user : (e as typeof AUDIT_EVENTS[0]).actor;
+      counts[key] = (counts[key] ?? 0) + 1;
+    });
+    return Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  }, [isLive, events, mockEvents]);
+
+  const exportEvents = (fmt: 'json' | 'csv') => {
+    const src = isLive ? events : mockEvents;
+    let blob: Blob;
+    if (fmt === 'json') {
+      blob = new Blob([JSON.stringify(src, null, 2)], { type: 'application/json' });
+    } else {
+      const headers = isLive ? 'ts,user,tool,ip,result,ms' : 'ts,actor,tool,target,decision,reason';
+      const rows = src.map(e =>
+        isLive
+          ? `${(e as BffAuditEvent).ts},${(e as BffAuditEvent).user},${(e as BffAuditEvent).tool},${(e as BffAuditEvent).ip},${(e as BffAuditEvent).result_ok},${(e as BffAuditEvent).duration_ms}`
+          : `${(e as typeof AUDIT_EVENTS[0]).ts},${(e as typeof AUDIT_EVENTS[0]).actor},${(e as typeof AUDIT_EVENTS[0]).tool},${(e as typeof AUDIT_EVENTS[0]).target},${(e as typeof AUDIT_EVENTS[0]).decision},${(e as typeof AUDIT_EVENTS[0]).reason ?? ''}`
+      );
+      blob = new Blob([[headers, ...rows].join('\n')], { type: 'text/csv' });
+    }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `audit.${fmt}`; a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="ca-audit-page">
       <div className="ca-audit-head">
@@ -324,8 +437,26 @@ function AuditA({ rowPad, cellFs, liveEvents, isLive }: { rowPad: string; cellFs
           Audit log
           <span className="mono" style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 400, marginLeft: 10 }}>{filtered}/{total} eventos</span>
         </div>
-        <div className="ca-audit-sub mono">{isLive ? "BFF SQLite · dados reais" : "mock local · sem persistência server-side"}</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div className="ca-audit-sub mono">{isLive ? "BFF SQLite · dados reais" : "mock local · sem persistência server-side"}</div>
+          <button onClick={() => exportEvents('json')} style={{ fontFamily: "monospace", fontSize: 10, padding: "2px 7px", border: "1px solid var(--border,#333)", borderRadius: 3, background: "transparent", color: "var(--text-dim,#888)", cursor: "pointer" }}>↓ json</button>
+          <button onClick={() => exportEvents('csv')}  style={{ fontFamily: "monospace", fontSize: 10, padding: "2px 7px", border: "1px solid var(--border,#333)", borderRadius: 3, background: "transparent", color: "var(--text-dim,#888)", cursor: "pointer" }}>↓ csv</button>
+        </div>
       </div>
+
+      <AuditTimeline events={allEventsForTimeline} />
+
+      {actorCounts.length > 0 && (
+        <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+          <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--text-muted)", alignSelf: "center" }}>top actors:</span>
+          {actorCounts.map(([actor, n]) => (
+            <span key={actor} style={{ fontFamily: "var(--font-mono)", fontSize: 11, padding: "1px 7px", border: "1px solid var(--border,#333)", borderRadius: 3, color: "var(--text-dim,#888)" }}>
+              {actor} <span style={{ color: "var(--info,#60a0f0)" }}>×{n}</span>
+            </span>
+          ))}
+        </div>
+      )}
+
       <div className="ca-audit-filter">
         {isLive && (
           <div className="ca-tools-pills">
@@ -381,8 +512,14 @@ function AuditA({ rowPad, cellFs, liveEvents, isLive }: { rowPad: string; cellFs
 
 function RunbookA({ state }: { state: ReturnType<typeof buildState> }) {
   const [activeBook, setActiveBook] = useState("merge");
-  const [checked, setChecked] = useState<Record<string, boolean>>({});
-  const toggle = (n: string) => setChecked(p => ({ ...p, [n]: !p[n] }));
+  const [checked, setChecked] = useState<Record<string, boolean>>(() => {
+    try { const s = localStorage.getItem('runbook-checked-merge'); return s ? JSON.parse(s) : {}; } catch { return {}; }
+  });
+  const toggle = (n: string) => setChecked(p => {
+    const next = { ...p, [n]: !p[n] };
+    try { localStorage.setItem(`runbook-checked-${activeBook}`, JSON.stringify(next)); } catch { /**/ }
+    return next;
+  });
   const RUNBOOKS = {
     rollback: { title: "Runbook · rollback de ref", sub: "Reset de emergência. git_update_ref aponta a branch de volta para um commit seguro.", statusBlocked: !state.server_info.dangerous_tools_enabled, blockedMsg: "git_update_ref bloqueado — ative modo operador", okMsg: "git_update_ref disponível sob confirm", steps: [
       { n:"01", title:"Identificar commit seguro", cmd:"compare_commits owner repo base head", note:"Confirme o sha do último commit bom antes do problema" },
@@ -414,7 +551,10 @@ function RunbookA({ state }: { state: ReturnType<typeof buildState> }) {
   } as const;
   const book = RUNBOOKS[activeBook as keyof typeof RUNBOOKS];
   const lastBook = useRef(activeBook);
-  if (lastBook.current !== activeBook) { setChecked({}); lastBook.current = activeBook; }
+  if (lastBook.current !== activeBook) {
+    try { const s = localStorage.getItem(`runbook-checked-${activeBook}`); setChecked(s ? JSON.parse(s) : {}); } catch { setChecked({}); }
+    lastBook.current = activeBook;
+  }
   const doneCount = Object.values(checked).filter(Boolean).length;
   const allDone = doneCount === book.steps.length;
   return (
@@ -448,6 +588,85 @@ function RunbookA({ state }: { state: ReturnType<typeof buildState> }) {
           );
         })}
       </ol>
+    </div>
+  );
+}
+
+// ── Command Palette ───────────────────────────────────────────────────────────
+
+const NAV_ITEMS = [
+  { id: "overview", label: "Overview", icon: "○" },
+  { id: "tools", label: "Tool catalog", icon: "◈" },
+  { id: "security", label: "Security posture", icon: "⬡" },
+  { id: "audit", label: "Audit log", icon: "◷" },
+  { id: "runbook", label: "Runbook", icon: "◉" },
+  { id: "playground", label: "Playground", icon: "▶" },
+  { id: "pr", label: "PR Readiness", icon: "⑂" },
+  { id: "wizard", label: ".env wizard", icon: "⚙" },
+  { id: "vercel", label: "Vercel deploy", icon: "▲" },
+];
+
+function CommandPalette({ allTools, onClose, onTab, onTool }: {
+  allTools: ToolFlatEntry[];
+  onClose: () => void;
+  onTab: (tab: string) => void;
+  onTool: (name: string) => void;
+}) {
+  const [q, setQ] = useState("");
+  const [cursor, setCursor] = useState(0);
+
+  const items = useMemo(() => {
+    const nav = NAV_ITEMS.filter(n => !q || n.label.toLowerCase().includes(q.toLowerCase())).map(n => ({ type: "nav" as const, id: n.id, label: n.label, sub: "tab", icon: n.icon }));
+    const tools = allTools.filter(t => !q || t.name.includes(q.toLowerCase()) || t.summary.toLowerCase().includes(q.toLowerCase())).slice(0, 20).map(t => ({ type: "tool" as const, id: t.name, label: t.name, sub: t.summary, icon: { low: "○", medium: "◐", high: "●" }[t.risk] }));
+    return [...nav, ...tools];
+  }, [q, allTools]);
+
+  useEffect(() => { setCursor(0); }, [q]);
+
+  const select = (item: typeof items[0]) => {
+    if (item.type === "nav") onTab(item.id);
+    else onTool(item.id);
+    onClose();
+  };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 2000, background: "rgba(0,0,0,0.65)", display: "flex", alignItems: "flex-start", justifyContent: "center", paddingTop: "12vh" }} onClick={onClose}>
+      <div style={{ width: 560, background: "var(--surface,#1a1a1a)", border: "1px solid var(--border-strong,#444)", borderRadius: 10, overflow: "hidden", boxShadow: "0 32px 80px rgba(0,0,0,0.5)" }} onClick={e => e.stopPropagation()}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", borderBottom: "1px solid var(--border,#333)" }}>
+          <span style={{ fontFamily: "var(--font-mono)", fontSize: 13, color: "var(--text-muted)" }}>⌘</span>
+          <input
+            autoFocus
+            value={q}
+            onChange={e => setQ(e.target.value)}
+            placeholder="Navegar ou buscar tool…"
+            style={{ flex: 1, background: "transparent", border: "none", outline: "none", fontFamily: "var(--font-mono)", fontSize: 13, color: "var(--text,#ccc)" }}
+            onKeyDown={e => {
+              if (e.key === "ArrowDown") { e.preventDefault(); setCursor(c => Math.min(c + 1, items.length - 1)); }
+              if (e.key === "ArrowUp") { e.preventDefault(); setCursor(c => Math.max(c - 1, 0)); }
+              if (e.key === "Enter" && items[cursor]) select(items[cursor]);
+              if (e.key === "Escape") onClose();
+            }}
+          />
+          <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--text-muted)", padding: "1px 5px", border: "1px solid var(--border,#333)", borderRadius: 3 }}>esc</span>
+        </div>
+        <div style={{ maxHeight: 360, overflowY: "auto" }}>
+          {items.length === 0 && <div style={{ padding: "16px 14px", fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--text-muted)" }}>Nenhum resultado</div>}
+          {items.map((item, i) => (
+            <button key={item.id} onClick={() => select(item)} style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "8px 14px", background: i === cursor ? "rgba(255,255,255,.07)" : "transparent", border: "none", borderBottom: "1px solid var(--border,#222)", cursor: "pointer", textAlign: "left" }} onMouseEnter={() => setCursor(i)}>
+              <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--text-muted)", width: 14, flexShrink: 0 }}>{item.icon}</span>
+              <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--text,#ccc)", flex: 1 }}>{item.label}</span>
+              <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--text-muted)", opacity: 0.6 }}>{item.sub}</span>
+            </button>
+          ))}
+        </div>
+        <div style={{ padding: "6px 14px", borderTop: "1px solid var(--border,#222)", display: "flex", gap: 12 }}>
+          {[["↑↓","navegar"],["↵","selecionar"],["esc","fechar"]].map(([k, l]) => (
+            <span key={k} style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--text-muted)" }}>
+              <span style={{ padding: "1px 4px", border: "1px solid var(--border,#333)", borderRadius: 2, marginRight: 4 }}>{k}</span>{l}
+            </span>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -495,6 +714,8 @@ export default function ConsoleA({ mode = "read_only", density = "compact", forc
   const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
   const [liveAudit, setLiveAudit] = useState<BffAuditEvent[] | null>(null);
   const [bffUser, setBffUser] = useState<BffUser | null>(null);
+  const [healthLatencyMs, setHealthLatencyMs] = useState<number | null>(null);
+  const [reconnecting, setReconnecting] = useState(false);
   const isDemo = !serverUrl || fetchError || liveHealth === null;
 
   useEffect(() => {
@@ -502,12 +723,13 @@ export default function ConsoleA({ mode = "read_only", density = "compact", forc
     let cancelled = false;
     const authHeaders: Record<string, string> = bearerToken ? { "Authorization": `Bearer ${bearerToken}` } : {};
     const fetchHealth = async () => {
+      const t0 = Date.now();
       try {
         const r = await fetch(`${serverUrl}/healthz`, { signal: AbortSignal.timeout(5000) });
         if (!r.ok) throw new Error("non-200");
         const data = await r.json();
-        if (!cancelled) { setLiveHealth(data); setFetchError(false); setLastRefreshed(new Date()); }
-      } catch { if (!cancelled) setFetchError(true); }
+        if (!cancelled) { setLiveHealth(data); setFetchError(false); setLastRefreshed(new Date()); setHealthLatencyMs(Date.now() - t0); }
+      } catch { if (!cancelled) { setFetchError(true); setHealthLatencyMs(null); } }
     };
     const fetchServerInfo = async () => {
       try {
@@ -584,6 +806,7 @@ export default function ConsoleA({ mode = "read_only", density = "compact", forc
   const [openTool, setOpenTool] = useState(initial.tool);
   const [playgroundTool, setPlaygroundTool] = useState<string | null>(null);
   const [showHelp, setShowHelp] = useState(false);
+  const [showPalette, setShowPalette] = useState(false);
   const searchRef = useRef<HTMLInputElement | null>(null);
   const gPressedRef = useRef(0);
 
@@ -593,7 +816,8 @@ export default function ConsoleA({ mode = "read_only", density = "compact", forc
     const onKey = (e: KeyboardEvent) => {
       const tag = ((e.target as HTMLElement).tagName ?? "").toLowerCase();
       const inField = tag === "input" || tag === "textarea" || tag === "select";
-      if (e.key === "Escape") { if (showHelp) { setShowHelp(false); return; } if (openTool) { setOpenTool(""); return; } if (inField) (e.target as HTMLElement).blur(); return; }
+      if (e.key === "Escape") { if (showPalette) { setShowPalette(false); return; } if (showHelp) { setShowHelp(false); return; } if (openTool) { setOpenTool(""); return; } if (inField) (e.target as HTMLElement).blur(); return; }
+      if ((e.key === "k" && (e.metaKey || e.ctrlKey))) { e.preventDefault(); setShowPalette(p => !p); return; }
       if (e.key === "?" && !inField) { setShowHelp(h => !h); return; }
       if (inField) return;
       if (e.key === "/") { e.preventDefault(); setTab("tools"); setTimeout(() => searchRef.current?.focus(), 30); return; }
@@ -606,7 +830,7 @@ export default function ConsoleA({ mode = "read_only", density = "compact", forc
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [openTool, showHelp]);
+  }, [openTool, showHelp, showPalette]);
 
   const allTools = useMemo(() => TOOL_CATALOG.flatMap(p => p.tools.map(t => ({ ...t, phase: p.phase }))), []);
 
@@ -662,6 +886,31 @@ export default function ConsoleA({ mode = "read_only", density = "compact", forc
               <span className="mono">{lastRefreshed.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
             </div>
           )}
+          {healthLatencyMs !== null && !isDemo && (
+            <div className="ca-topbar-pill" style={{ gap: 4 }}>
+              <span className="ca-pill-k">ping</span>
+              <span className="mono" style={{ color: healthLatencyMs < 300 ? "var(--ok)" : healthLatencyMs < 1000 ? "var(--warn)" : "var(--danger)" }}>{healthLatencyMs}ms</span>
+            </div>
+          )}
+          {serverUrl && (
+            <button
+              onClick={async () => {
+                setReconnecting(true);
+                const t0 = Date.now();
+                try {
+                  const r = await fetch(`${serverUrl}/healthz`, { signal: AbortSignal.timeout(5000) });
+                  if (!r.ok) throw new Error();
+                  const data = await r.json();
+                  setLiveHealth(data); setFetchError(false); setLastRefreshed(new Date()); setHealthLatencyMs(Date.now() - t0);
+                } catch { setFetchError(true); setHealthLatencyMs(null); }
+                setReconnecting(false);
+              }}
+              style={{ fontFamily: "monospace", fontSize: 10, padding: "2px 7px", border: "1px solid var(--border,#333)", borderRadius: 3, background: "transparent", color: "var(--text-dim,#888)", cursor: "pointer" }}
+              title="Reconectar ao servidor"
+            >
+              {reconnecting ? "…" : "⟳"}
+            </button>
+          )}
         </div>
         <div className="ca-topbar-right" style={{ display: "flex", alignItems: "center", gap: 8 }}>
           {serverUrl && (
@@ -682,7 +931,7 @@ export default function ConsoleA({ mode = "read_only", density = "compact", forc
           <button key={k} onClick={() => setTab(k)} className={`ca-tab ${tab === k ? "is-active" : ""}`}>{label}<span className="ca-tab-key mono">g{key}</span></button>
         ))}
         <div className="ca-tabs-spacer" />
-        <div className="ca-tabs-meta mono"><span className="ca-kbd">/</span> grep<span className="ca-kbd">g</span><span className="ca-kbd">·</span> nav<span className="ca-kbd">esc</span> close<span className="ca-kbd">?</span> help</div>
+        <div className="ca-tabs-meta mono"><span className="ca-kbd">⌘K</span> palette<span className="ca-kbd">/</span> grep<span className="ca-kbd">g</span><span className="ca-kbd">·</span> nav<span className="ca-kbd">esc</span> close<span className="ca-kbd">?</span> help</div>
       </nav>
 
       <div className="ca-body">
@@ -698,6 +947,15 @@ export default function ConsoleA({ mode = "read_only", density = "compact", forc
       </div>
 
       {activeTool && <ToolDrawer tool={activeTool} mode={mode} onClose={() => setOpenTool("")} onPlayground={name => { setPlaygroundTool(name); setTab("playground"); setOpenTool(""); }} />}
+
+      {showPalette && (
+        <CommandPalette
+          allTools={allTools}
+          onClose={() => setShowPalette(false)}
+          onTab={t => setTab(t)}
+          onTool={name => setOpenTool(name)}
+        />
+      )}
 
       {showHelp && (
         <div className="ca-help-overlay" onClick={() => setShowHelp(false)}>

@@ -4,6 +4,8 @@ import { getSchema } from '../data/schemas';
 
 type Props = { serverUrl: string; mode?: string; initialTool?: string | null; bearerToken?: string; bffRole?: string };
 
+type HistoryEntry = { ts: string; tool: string; risk: string; ok: boolean; demo?: boolean; error?: string; ms?: number };
+
 // ── Demo responses ────────────────────────────────────────────────────────────
 
 const DEMO_RESPONSES: Record<string, unknown> = {
@@ -53,16 +55,35 @@ function RiskBadge({ risk }: { risk: 'low' | 'medium' | 'high' }) {
   );
 }
 
-// ── Main component ────────────────────────────────────────────────────────────
+// ── JSON syntax highlight (safe — HTML-escapes before coloring) ───────────────
+
+function syntaxHighlight(json: string): string {
+  const e = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return e.replace(
+    /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
+    match => {
+      if (/^"/.test(match))
+        return /:$/.test(match)
+          ? `<span style="color:#60a0f0">${match}</span>`
+          : `<span style="color:#7ec8a0">${match}</span>`;
+      if (/true|false/.test(match)) return `<span style="color:#ef5350">${match}</span>`;
+      if (/null/.test(match))       return `<span style="color:#aaa">${match}</span>`;
+      return `<span style="color:#f0b429">${match}</span>`;
+    }
+  );
+}
+
+// ── CSRF helper ───────────────────────────────────────────────────────────────
 
 function getCsrfToken(): string {
   const match = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]*)/);
   return match ? decodeURIComponent(match[1]) : "";
 }
 
+// ── Main component ────────────────────────────────────────────────────────────
+
 export default function PlaygroundA({ serverUrl, initialTool, mode = 'read_only', bearerToken = "", bffRole }: Props) {
 
-  // All non-planned tools — grouped by phase
   const allTools = useMemo(() =>
     TOOL_CATALOG.flatMap(p => p.tools.map(t => ({ ...t, phase: p.phase }))).filter(t => !t.planned),
     []
@@ -74,22 +95,36 @@ export default function PlaygroundA({ serverUrl, initialTool, mode = 'read_only'
   }, [allTools]);
 
   const [selectedTool, setSelectedTool] = useState(allTools[0]?.name ?? "");
-  const [formArgs, setFormArgs]         = useState<Record<string, string>>({});
-  const [loading, setLoading]           = useState(false);
+  const [formArgs, setFormArgs] = useState<Record<string, string>>(() => {
+    try {
+      const s = localStorage.getItem(`pg-args-${allTools[0]?.name}`);
+      return s ? JSON.parse(s) : {};
+    } catch { return {}; }
+  });
+  const [loading, setLoading]             = useState(false);
   const [resultDisplay, setResultDisplay] = useState<string | null>(null);
-  const [callError, setCallError]       = useState<string | null>(null);
-  const [history, setHistory]           = useState<{ ts: string; tool: string; risk: string; ok: boolean; demo?: boolean; error?: string }[]>([]);
-  const [copied, setCopied]             = useState(false);
-  const [confirmed, setConfirmed]       = useState(false);
+  const [callError, setCallError]         = useState<string | null>(null);
+  const [history, setHistory]             = useState<HistoryEntry[]>(() => {
+    try { const s = localStorage.getItem('pg-history'); return s ? JSON.parse(s) : []; } catch { return []; }
+  });
+  const [copied, setCopied]               = useState(false);
+  const [confirmed, setConfirmed]         = useState(false);
+  const [latencyMs, setLatencyMs]         = useState<number | null>(null);
+  const [resultTab, setResultTab]         = useState<'result' | 'curl' | 'jsonrpc'>('result');
 
   // Navigate from ToolDrawer
   useEffect(() => {
     if (initialTool && allTools.some(t => t.name === initialTool)) {
       setSelectedTool(initialTool);
-      setFormArgs({});
+      try {
+        const saved = localStorage.getItem(`pg-args-${initialTool}`);
+        setFormArgs(saved ? JSON.parse(saved) : {});
+      } catch { setFormArgs({}); }
       setResultDisplay(null);
       setCallError(null);
       setConfirmed(false);
+      setResultTab('result');
+      setLatencyMs(null);
     }
   }, [initialTool, allTools]);
 
@@ -101,10 +136,9 @@ export default function PlaygroundA({ serverUrl, initialTool, mode = 'read_only'
   const activeTool  = allTools.find(t => t.name === selectedTool);
   const risk        = activeTool?.risk ?? 'low';
 
-  // Can this tool be executed given the current mode?
   const canExecute = (() => {
     if (!activeTool) return false;
-    if (isDemo) return true; // demo always shows response
+    if (isDemo) return true;
     if (risk === 'low') return true;
     if (risk === 'medium') return mode !== 'read_only';
     if (risk === 'high') return mode === 'operator' && confirmed;
@@ -115,15 +149,20 @@ export default function PlaygroundA({ serverUrl, initialTool, mode = 'read_only'
     if (isDemo) return null;
     if (risk === 'medium' && mode === 'read_only') return 'Esta tool faz mutações. Mude a postura para write_safe ou operator nas Settings.';
     if (risk === 'high' && mode !== 'operator') return 'Esta tool é destrutiva e exige modo operator + ENABLE_DANGEROUS_TOOLS=true no servidor.';
-    if (risk === 'high' && !confirmed) return null; // handled by checkbox
+    if (risk === 'high' && !confirmed) return null;
     return null;
   })();
 
   const handleSelectTool = (name: string) => {
     setSelectedTool(name);
-    setFormArgs({});
+    try {
+      const saved = localStorage.getItem(`pg-args-${name}`);
+      setFormArgs(saved ? JSON.parse(saved) : {});
+    } catch { setFormArgs({}); }
     setResultDisplay(null);
     setCallError(null);
+    setResultTab('result');
+    setLatencyMs(null);
   };
 
   const handleExecute = async () => {
@@ -131,13 +170,21 @@ export default function PlaygroundA({ serverUrl, initialTool, mode = 'read_only'
     setLoading(true);
     setResultDisplay(null);
     setCallError(null);
+    setLatencyMs(null);
     const ts = new Date().toISOString().slice(11, 19);
+    const t0 = Date.now();
 
     if (isDemo) {
       await new Promise(r => setTimeout(r, 320));
       const mock = generateDemoResponse(selectedTool, formArgs);
+      const ms = Date.now() - t0;
       setResultDisplay(JSON.stringify(mock, null, 2));
-      setHistory(h => [{ ts, tool: selectedTool, risk, ok: true, demo: true }, ...h].slice(0, 20));
+      setLatencyMs(ms);
+      setHistory(h => {
+        const next = [{ ts, tool: selectedTool, risk, ok: true, demo: true, ms }, ...h].slice(0, 20);
+        try { localStorage.setItem('pg-history', JSON.stringify(next)); } catch { /**/ }
+        return next;
+      });
       setLoading(false);
       return;
     }
@@ -145,14 +192,10 @@ export default function PlaygroundA({ serverUrl, initialTool, mode = 'read_only'
     try {
       const args: Record<string, unknown> = {};
       schema.inputs.forEach(inp => {
-        if (formArgs[inp.name] !== undefined && formArgs[inp.name] !== "") {
+        if (formArgs[inp.name] !== undefined && formArgs[inp.name] !== "")
           args[inp.name] = formArgs[inp.name];
-        }
       });
-      // High-risk tools need confirm field
-      if (activeTool?.requiresConfirm) {
-        args['confirm'] = 'CONFIRM_DESTRUCTIVE_OPERATION';
-      }
+      if (activeTool?.requiresConfirm) args['confirm'] = 'CONFIRM_DESTRUCTIVE_OPERATION';
       const authHeaders: Record<string, string> = bearerToken ? { "Authorization": `Bearer ${bearerToken}` } : {};
       const csrf = getCsrfToken();
       const csrfHeader: Record<string, string> = csrf ? { "X-CSRF-Token": csrf } : {};
@@ -169,27 +212,64 @@ export default function PlaygroundA({ serverUrl, initialTool, mode = 'read_only'
       const raw = data?.result?.content?.[0]?.text ?? JSON.stringify(data.result, null, 2);
       let parsed: string;
       try { parsed = JSON.stringify(JSON.parse(raw), null, 2); } catch { parsed = raw; }
+      const ms = Date.now() - t0;
       setResultDisplay(parsed);
-      setHistory(h => [{ ts, tool: selectedTool, risk, ok: true, demo: false }, ...h].slice(0, 20));
+      setLatencyMs(ms);
+      setHistory(h => {
+        const next = [{ ts, tool: selectedTool, risk, ok: true, demo: false, ms }, ...h].slice(0, 20);
+        try { localStorage.setItem('pg-history', JSON.stringify(next)); } catch { /**/ }
+        return next;
+      });
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Network error";
+      const ms = Date.now() - t0;
       setCallError(msg);
-      setHistory(h => [{ ts, tool: selectedTool, risk, ok: false, error: msg }, ...h].slice(0, 20));
+      setLatencyMs(ms);
+      setHistory(h => {
+        const next = [{ ts, tool: selectedTool, risk, ok: false, error: msg, ms }, ...h].slice(0, 20);
+        try { localStorage.setItem('pg-history', JSON.stringify(next)); } catch { /**/ }
+        return next;
+      });
     }
     setLoading(false);
   };
 
-  const updateArg   = (name: string, value: string) => setFormArgs(a => ({ ...a, [name]: value }));
-  const handleCopy  = () => {
+  const updateArg = (name: string, value: string) => {
+    setFormArgs(a => {
+      const next = { ...a, [name]: value };
+      try { localStorage.setItem(`pg-args-${selectedTool}`, JSON.stringify(next)); } catch { /**/ }
+      return next;
+    });
+  };
+
+  const handleCopy = () => {
     if (!resultDisplay) return;
     navigator.clipboard?.writeText(resultDisplay);
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   };
 
-  const lowCount    = allTools.filter(t => t.risk === 'low').length;
-  const medCount    = allTools.filter(t => t.risk === 'medium').length;
-  const highCount   = allTools.filter(t => t.risk === 'high').length;
+  // Snippet generators
+  const argsForSnippet = useMemo(() => {
+    const a: Record<string, unknown> = {};
+    schema.inputs.forEach(inp => { if (formArgs[inp.name]) a[inp.name] = formArgs[inp.name]; });
+    return a;
+  }, [schema.inputs, formArgs]);
+
+  const jsonRpcSnippet = useMemo(() =>
+    JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: selectedTool, arguments: argsForSnippet } }, null, 2),
+    [selectedTool, argsForSnippet]
+  );
+
+  const curlSnippet = useMemo(() => {
+    const url = serverUrl || 'https://your-mcp-server/mcp';
+    const body = JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: selectedTool, arguments: argsForSnippet } });
+    return `curl -X POST ${url} \\\n  -H 'Content-Type: application/json' \\\n  -H 'Authorization: Bearer <token>' \\\n  -d '${body}'`;
+  }, [selectedTool, argsForSnippet, serverUrl]);
+
+  const lowCount  = allTools.filter(t => t.risk === 'low').length;
+  const medCount  = allTools.filter(t => t.risk === 'medium').length;
+  const highCount = allTools.filter(t => t.risk === 'high').length;
 
   return (
     <div className="ca-pg">
@@ -297,24 +377,70 @@ export default function PlaygroundA({ serverUrl, initialTool, mode = 'read_only'
           </div>
 
           <div className="ca-pg-result">
+            {/* Result tabs */}
             <div className="ca-pg-result-h">
-              <span className="mono">resultado</span>
-              {resultDisplay && <button className="ca-copy" onClick={handleCopy}>{copied ? "✓" : "copy"}</button>}
+              <div style={{ display: 'flex', gap: 4 }}>
+                {(['result', 'curl', 'jsonrpc'] as const).map(t => (
+                  <button
+                    key={t}
+                    onClick={() => setResultTab(t)}
+                    style={{ fontFamily: 'ui-monospace, monospace', fontSize: 11, padding: '2px 8px', border: '1px solid', borderRadius: 4, cursor: 'pointer', background: resultTab === t ? 'rgba(255,255,255,.1)' : 'transparent', borderColor: resultTab === t ? 'var(--border-strong,#555)' : 'var(--border,#333)', color: resultTab === t ? 'var(--text,#ccc)' : 'var(--text-dim,#888)' }}
+                  >
+                    {t === 'result' ? 'resultado' : t}
+                  </button>
+                ))}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                {latencyMs !== null && (
+                  <span style={{ fontFamily: 'ui-monospace, monospace', fontSize: 10, color: latencyMs < 500 ? 'var(--ok,#7ec8a0)' : latencyMs < 2000 ? 'var(--warn,#f0b429)' : 'var(--danger,#ef5350)', background: 'rgba(255,255,255,.05)', border: '1px solid var(--border,#333)', borderRadius: 3, padding: '1px 5px' }}>
+                    {latencyMs}ms
+                  </span>
+                )}
+                {resultDisplay && resultTab === 'result' && (
+                  <button className="ca-copy" onClick={handleCopy}>{copied ? "✓" : "copy"}</button>
+                )}
+              </div>
             </div>
-            {callError && <div className="ca-pg-error mono">{callError}</div>}
-            {resultDisplay && <pre className="ca-pg-pre mono">{resultDisplay}</pre>}
-            {!resultDisplay && !callError && <div className="ca-pg-empty mono">execute uma tool para ver o resultado</div>}
+
+            {/* Tab content */}
+            {resultTab === 'result' && (
+              <>
+                {callError && <div className="ca-pg-error mono">{callError}</div>}
+                {resultDisplay && (
+                  <pre
+                    className="ca-pg-pre mono"
+                    dangerouslySetInnerHTML={{ __html: syntaxHighlight(resultDisplay) }}
+                  />
+                )}
+                {!resultDisplay && !callError && <div className="ca-pg-empty mono">execute uma tool para ver o resultado</div>}
+              </>
+            )}
+            {resultTab === 'curl' && (
+              <pre className="ca-pg-pre mono" style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>{curlSnippet}</pre>
+            )}
+            {resultTab === 'jsonrpc' && (
+              <pre
+                className="ca-pg-pre mono"
+                dangerouslySetInnerHTML={{ __html: syntaxHighlight(jsonRpcSnippet) }}
+              />
+            )}
           </div>
         </div>
 
         {/* History */}
         {history.length > 0 && (
           <div className="ca-pg-history">
-            <div className="ca-pg-history-h mono">histórico</div>
+            <div className="ca-pg-history-h mono" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>histórico</span>
+              <button onClick={() => { setHistory([]); localStorage.removeItem('pg-history'); }} style={{ fontFamily: 'monospace', fontSize: 10, background: 'transparent', border: 'none', color: 'var(--text-muted,#666)', cursor: 'pointer' }}>× limpar</button>
+            </div>
             {history.map((h, i) => (
               <div key={i} className={`ca-pg-hist-row ${h.ok ? "is-ok" : "is-err"}`}>
                 <span className="mono ca-pg-hist-ts">{h.ts}</span>
                 <span className="mono ca-pg-hist-tool" style={{ flex: 1 }}>{h.tool}</span>
+                {h.ms !== undefined && (
+                  <span style={{ fontFamily: 'monospace', fontSize: 9, color: h.ms < 500 ? 'var(--ok,#7ec8a0)' : 'var(--warn,#f0b429)', opacity: 0.7 }}>{h.ms}ms</span>
+                )}
                 {h.risk !== 'low' && <RiskBadge risk={h.risk as 'low' | 'medium' | 'high'} />}
                 {h.demo && <span className="mono ca-pg-hist-demo">demo</span>}
               </div>

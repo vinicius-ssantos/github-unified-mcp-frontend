@@ -1,14 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import ConsoleA from './components/ConsoleA';
 
 type Mode = 'read_only' | 'write_safe' | 'operator';
 type Density = 'compact' | 'comfortable';
-type Settings = { serverUrl: string; bearerToken: string; mode: Mode; density: Density; forceError: boolean; vercelToken: string };
+type Theme = 'dark' | 'light';
+type Settings = { serverUrl: string; bearerToken: string; mode: Mode; density: Density; forceError: boolean; vercelToken: string; theme: Theme };
 
 const STORAGE_KEY = 'mcp-panel-settings';
 
 function defaultSettings(): Settings {
-  return { serverUrl: import.meta.env.VITE_MCP_URL || '', bearerToken: '', mode: 'read_only', density: 'compact', forceError: false, vercelToken: '' };
+  return { serverUrl: import.meta.env.VITE_MCP_URL || '', bearerToken: '', mode: 'read_only', density: 'compact', forceError: false, vercelToken: '', theme: 'dark' };
 }
 
 function loadSettings(): Settings {
@@ -33,10 +34,32 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
   );
 }
 
+const LIGHT_VARS = `
+  --bg: oklch(0.97 0.002 240);
+  --surface: oklch(0.94 0.004 240);
+  --surface-2: oklch(0.90 0.005 240);
+  --border: oklch(0.82 0.008 240);
+  --border-strong: oklch(0.70 0.012 240);
+  --text: oklch(0.18 0.008 240);
+  --text-dim: oklch(0.38 0.01 240);
+  --text-muted: oklch(0.52 0.012 240);
+`;
+
 export function App() {
   const [settings, setSettings] = useState<Settings>(loadSettings);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [draft, setDraft] = useState<Settings>(settings);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (settings.theme === 'light') {
+      root.setAttribute('style', LIGHT_VARS);
+      root.setAttribute('data-theme', 'light');
+    } else {
+      root.removeAttribute('style');
+      root.removeAttribute('data-theme');
+    }
+  }, [settings.theme]);
 
   const applySettings = () => {
     setSettings(draft);
@@ -95,6 +118,17 @@ export function App() {
                   <button key={d} onClick={() => setDraft(s => ({ ...s, density: d }))}
                     style={{ fontFamily: 'monospace', fontSize: 11, padding: '4px 10px', border: '1px solid var(--border,#333)', borderRadius: 4, cursor: 'pointer', background: draft.density === d ? 'var(--info,#4a90e2)' : 'transparent', color: draft.density === d ? '#000' : 'var(--text,#ccc)' }}>
                     {d}
+                  </button>
+                ))}
+              </div>
+            </Field>
+
+            <Field label="Tema">
+              <div style={{ display: 'flex', gap: 6 }}>
+                {(['dark', 'light'] as Theme[]).map(t => (
+                  <button key={t} onClick={() => setDraft(d => ({ ...d, theme: t }))}
+                    style={{ fontFamily: 'monospace', fontSize: 11, padding: '4px 10px', border: '1px solid var(--border,#333)', borderRadius: 4, cursor: 'pointer', background: draft.theme === t ? 'var(--info,#4a90e2)' : 'transparent', color: draft.theme === t ? '#000' : 'var(--text,#ccc)' }}>
+                    {t === 'dark' ? '◑ dark' : '◐ light'}
                   </button>
                 ))}
               </div>
