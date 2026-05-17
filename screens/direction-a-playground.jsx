@@ -113,6 +113,11 @@ function PlaygroundA({ serverUrl, mode, initialTool, bearerToken = "" }) {
     setCallError(null);
   };
 
+  // Persist session history to localStorage
+  useEffect(() => {
+    localStorage.setItem('mcp-pg-history', JSON.stringify(history.slice(0, 20)));
+  }, [history]);
+
   const handleExecute = async () => {
     if (loading) return;
     setLoading(true);
