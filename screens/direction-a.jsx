@@ -367,6 +367,12 @@ function ConsoleA({ mode = "read_only", density = "compact", forceError = false,
           <div className="ca-topbar-pill"><span className="ca-pill-k">commit</span><span className="mono">{state.healthz.commit_sha}</span></div>
           <div className="ca-topbar-pill"><span className="ca-pill-k">schema</span><span className="mono">{state.healthz.tool_schema_version}</span></div>
           <div className="ca-topbar-pill"><span className="ca-pill-k">uptime</span><LiveUptime baseSeconds={state.healthz.uptime_seconds} stopped={forceError} /></div>
+          {latency !== null && !isDemo && (
+            <div className="ca-topbar-pill">
+              <span className="ca-pill-k">ping</span>
+              <span className={`mono${latency > 800 ? " ca-latency-slow" : latency > 300 ? " ca-latency-mid" : " ca-latency-ok"}`}>{latency}ms</span>
+            </div>
+          )}
           {lastRefreshed && !isDemo && (
             <div className="ca-topbar-pill" style={{opacity:0.6}}><span className="ca-pill-k">sync</span><span className="mono">{lastRefreshed.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit",second:"2-digit"})}</span></div>
           )}
@@ -475,6 +481,24 @@ function OverviewA({ state, forceError, sparkData = {}, setTab = () => {}, allTo
           </div>
         ))}
       </div>
+
+      {auditStats.blocked > 0 && (() => {
+        const blocked = window.AUDIT_EVENTS.filter(e => e.level !== "info").slice(0, 4);
+        return (
+          <div className="ca-alerts-strip">
+            <span className="ca-alerts-label mono">alertas ativos</span>
+            {blocked.map((e, i) => (
+              <div key={i} className={`ca-alert-item ca-alert-${e.level}`}>
+                <span className="ca-alert-tool mono">{e.tool}</span>
+                <span className="ca-alert-reason">{e.reason || e.decision}</span>
+                <span className="ca-alert-ts mono">{e.ts.slice(11, 19)}</span>
+              </div>
+            ))}
+            <button className="ca-alert-more mono" onClick={() => setTab("audit")}>ver todos →</button>
+          </div>
+        );
+      })()}
+
       <div className="ca-grid-overview">
         <div className="ca-card">
           <div className="ca-card-h"><span className="ca-card-h-num mono">01</span><span className="ca-card-h-title">Postura de segurança</span></div>
@@ -567,6 +591,13 @@ function ToolsA({ tools, totals, riskFilter, setRiskFilter, phaseFilter, setPhas
     setTimeout(() => setCopiedTool(null), 1500);
   };
 
+  const exportCatalog = () => {
+    const all = window.TOOL_CATALOG.flatMap(p => p.tools.map(t => ({ phase: p.phase, name: t.name, summary: t.summary, risk: t.risk, requiresConfirm: !!t.requiresConfirm, requiresDangerous: !!t.requiresDangerous, planned: !!t.planned })));
+    const blob = new Blob([JSON.stringify(all, null, 2)], { type: 'application/json' });
+    const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: 'mcp-tool-catalog.json' });
+    a.click(); URL.revokeObjectURL(a.href);
+  };
+
   const willRun = (t) => {
     if (t.requiresDangerous && !state.server_info.dangerous_tools_enabled) return { tone:"danger", text:"blocked", reason:"dangerous_tools_disabled" };
     if (t.requiresWorkflowDispatch && !state.server_info.workflow_dispatch_enabled) return { tone:"danger", text:"blocked", reason:"workflow_dispatch_disabled" };
@@ -591,6 +622,9 @@ function ToolsA({ tools, totals, riskFilter, setRiskFilter, phaseFilter, setPhas
           <select value={phaseFilter} onChange={e=>setPhaseFilter(e.target.value)} className="ca-tools-select mono">
             <option value="all">all</option>{phases.map(p=><option key={p} value={p}>{p}</option>)}
           </select>
+        </div>
+        <div style={{ marginLeft: "auto" }}>
+          <button className="ca-export-btn" style={{ border: "1px solid var(--border)", borderRadius: 4 }} onClick={exportCatalog} title="Exportar catálogo como JSON">↓ catalog</button>
         </div>
       </div>
 
