@@ -96,6 +96,22 @@ export type DriftInfo = {
   demo: boolean;
 };
 
+export type BffAuditEvent = {
+  id: number;
+  ts: string;
+  user: string;
+  tool: string;
+  args_hash: string;
+  result_ok: boolean;
+  ip: string;
+  duration_ms: number;
+};
+
+export type BffUser = {
+  user: string;
+  name: string;
+};
+
 export type ToolSummary = {
   name: string;
   phase: string;

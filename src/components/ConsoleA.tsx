@@ -7,7 +7,7 @@ import PrReadyA from './PrReadyA';
 import VercelDeployTab from './VercelDeployTab';
 import { TOOL_CATALOG } from '../data/tools';
 import { SERVER_STATES, ENV_CONFIG, AUDIT_EVENTS, RATE_LIMITS } from '../data/serverState';
-import type { ToolFlatEntry, DriftInfo, ServerInfoFlags, HealthzResponse } from '../types/mcp';
+import type { ToolFlatEntry, DriftInfo, ServerInfoFlags, HealthzResponse, BffAuditEvent, BffUser } from '../types/mcp';
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -291,52 +291,85 @@ function SecurityA({ state }: { state: ReturnType<typeof buildState> }) {
   );
 }
 
-function AuditA({ rowPad, cellFs }: { rowPad: string; cellFs: number }) {
-  const [levelFilter, setLevelFilter] = useState("all");
+function AuditA({ rowPad, cellFs, liveEvents, isLive }: { rowPad: string; cellFs: number; liveEvents: BffAuditEvent[] | null; isLive: boolean }) {
   const [toolQuery, setToolQuery] = useState("");
-  const filtered = AUDIT_EVENTS.filter(e => {
-    if (levelFilter !== "all" && e.level !== levelFilter) return false;
-    if (toolQuery && !e.tool.toLowerCase().includes(toolQuery.toLowerCase()) && !e.actor.toLowerCase().includes(toolQuery.toLowerCase())) return false;
+  const [resultFilter, setResultFilter] = useState("all");
+
+  const events = liveEvents ?? [];
+  const mockEvents = liveEvents === null ? AUDIT_EVENTS : [];
+
+  const filteredLive = events.filter(e => {
+    if (resultFilter === "ok" && !e.result_ok) return false;
+    if (resultFilter === "fail" && e.result_ok) return false;
+    if (toolQuery && !e.tool.toLowerCase().includes(toolQuery.toLowerCase()) && !e.user.toLowerCase().includes(toolQuery.toLowerCase())) return false;
     return true;
   });
-  const levelCounts = useMemo(() => ({
-    info: AUDIT_EVENTS.filter(e => e.level === "info").length,
-    warn: AUDIT_EVENTS.filter(e => e.level === "warn").length,
-    error: AUDIT_EVENTS.filter(e => e.level === "error").length,
-  }), []);
+  const filteredMock = mockEvents.filter(e => {
+    if (toolQuery && !e.tool.toLowerCase().includes(toolQuery.toLowerCase())) return false;
+    return true;
+  });
+
+  const total = isLive ? events.length : mockEvents.length;
+  const filtered = isLive ? filteredLive.length : filteredMock.length;
+
   return (
     <div className="ca-audit-page">
       <div className="ca-audit-head">
-        <div className="ca-audit-title">Audit log<span className="mono" style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 400, marginLeft: 10 }}>{filtered.length}/{AUDIT_EVENTS.length} eventos</span></div>
-        <div className="ca-audit-sub mono">stream local · stateless_http=true · sem persistência server-side</div>
+        <div className="ca-audit-title">
+          Audit log
+          <span className="mono" style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 400, marginLeft: 10 }}>{filtered}/{total} eventos</span>
+        </div>
+        <div className="ca-audit-sub mono">{isLive ? "BFF SQLite · dados reais" : "mock local · sem persistência server-side"}</div>
       </div>
       <div className="ca-audit-filter">
-        <div className="ca-tools-pills">
-          <span className="ca-tools-pills-label mono">level</span>
-          {[["all","all"],["info",`info · ${levelCounts.info}`],["warn",`warn · ${levelCounts.warn}`],["error",`error · ${levelCounts.error}`]].map(([k,label]) => (
-            <button key={k} className={`ca-tools-pill ${levelFilter === k ? "is-active" : ""}`} onClick={() => setLevelFilter(k)}>{label}</button>
-          ))}
-        </div>
+        {isLive && (
+          <div className="ca-tools-pills">
+            <span className="ca-tools-pills-label mono">result</span>
+            {[["all","all"],["ok","ok"],["fail","fail"]].map(([k,label]) => (
+              <button key={k} className={`ca-tools-pill ${resultFilter === k ? "is-active" : ""}`} onClick={() => setResultFilter(k)}>{label}</button>
+            ))}
+          </div>
+        )}
         <div className="ca-tools-search" style={{ flex: "0 1 260px" }}>
           <span className="mono ca-tools-search-prompt">grep</span>
-          <input value={toolQuery} onChange={e => setToolQuery(e.target.value)} placeholder="filtrar por tool ou actor…" />
+          <input value={toolQuery} onChange={e => setToolQuery(e.target.value)} placeholder="filtrar por tool ou usuário…" />
         </div>
-        {(levelFilter !== "all" || toolQuery) && <button className="ca-tools-pill" onClick={() => { setLevelFilter("all"); setToolQuery(""); }}>× limpar</button>}
+        {(resultFilter !== "all" || toolQuery) && <button className="ca-tools-pill" onClick={() => { setResultFilter("all"); setToolQuery(""); }}>× limpar</button>}
       </div>
-      <table className="ca-audit ca-audit-full" style={{ "--row-pad": rowPad, "--cell-fs": cellFs + "px" } as React.CSSProperties}>
-        <thead><tr><th>ts</th><th>actor</th><th>tool / endpoint</th><th>target</th><th>decision</th><th>reason</th></tr></thead>
-        <tbody>
-          {filtered.map((e, i) => (
-            <tr key={i}>
-              <td className="mono ca-audit-ts">{e.ts}</td><td className="mono">{e.actor}</td>
-              <td className="mono ca-audit-tool">{e.tool}</td><td className="mono ca-audit-target">{e.target}</td>
-              <td><span className={`ca-decision ca-decision-${e.level}`}><StatusDot tone={e.level === "info" ? "ok" : e.level === "warn" ? "warn" : "danger"} />{e.decision}</span></td>
-              <td className="mono ca-audit-reason">{e.reason ?? "—"}</td>
-            </tr>
-          ))}
-          {filtered.length === 0 && <tr><td colSpan={6} className="ca-tools-empty mono">$ grep returned 0 — nenhum evento para este filtro</td></tr>}
-        </tbody>
-      </table>
+
+      {isLive ? (
+        <table className="ca-audit ca-audit-full" style={{ "--row-pad": rowPad, "--cell-fs": cellFs + "px" } as React.CSSProperties}>
+          <thead><tr><th>ts</th><th>user</th><th>tool</th><th>ip</th><th>result</th><th>ms</th></tr></thead>
+          <tbody>
+            {filteredLive.map(e => (
+              <tr key={e.id}>
+                <td className="mono ca-audit-ts">{e.ts.slice(0, 19).replace("T", " ")}</td>
+                <td className="mono">{e.user}</td>
+                <td className="mono ca-audit-tool">{e.tool}</td>
+                <td className="mono ca-audit-target">{e.ip}</td>
+                <td><span className={`ca-decision ca-decision-${e.result_ok ? "info" : "error"}`}><StatusDot tone={e.result_ok ? "ok" : "danger"} />{e.result_ok ? "ok" : "fail"}</span></td>
+                <td className="mono">{e.duration_ms}</td>
+              </tr>
+            ))}
+            {filteredLive.length === 0 && <tr><td colSpan={6} className="ca-tools-empty mono">$ grep returned 0 — nenhum evento para este filtro</td></tr>}
+          </tbody>
+        </table>
+      ) : (
+        <table className="ca-audit ca-audit-full" style={{ "--row-pad": rowPad, "--cell-fs": cellFs + "px" } as React.CSSProperties}>
+          <thead><tr><th>ts</th><th>actor</th><th>tool / endpoint</th><th>target</th><th>decision</th><th>reason</th></tr></thead>
+          <tbody>
+            {filteredMock.map((e, i) => (
+              <tr key={i}>
+                <td className="mono ca-audit-ts">{e.ts}</td><td className="mono">{e.actor}</td>
+                <td className="mono ca-audit-tool">{e.tool}</td><td className="mono ca-audit-target">{e.target}</td>
+                <td><span className={`ca-decision ca-decision-${e.level}`}><StatusDot tone={e.level === "info" ? "ok" : e.level === "warn" ? "warn" : "danger"} />{e.decision}</span></td>
+                <td className="mono ca-audit-reason">{e.reason ?? "—"}</td>
+              </tr>
+            ))}
+            {filteredMock.length === 0 && <tr><td colSpan={6} className="ca-tools-empty mono">$ grep returned 0 — nenhum evento para este filtro</td></tr>}
+          </tbody>
+        </table>
+      )}
     </div>
   );
 }
@@ -455,6 +488,8 @@ export default function ConsoleA({ mode = "read_only", density = "compact", forc
   const [fetchError, setFetchError] = useState(false);
   const [liveTools, setLiveTools] = useState<string[] | null>(null);
   const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
+  const [liveAudit, setLiveAudit] = useState<BffAuditEvent[] | null>(null);
+  const [bffUser, setBffUser] = useState<BffUser | null>(null);
   const isDemo = !serverUrl || fetchError || liveHealth === null;
 
   useEffect(() => {
@@ -499,6 +534,30 @@ export default function ConsoleA({ mode = "read_only", density = "compact", forc
     fetchToolsList();
     return () => { cancelled = true; };
   }, [serverUrl, bearerToken]);
+
+  useEffect(() => {
+    if (!serverUrl) { setLiveAudit(null); setBffUser(null); return; }
+    let cancelled = false;
+    const fetchAudit = async () => {
+      try {
+        const r = await fetch(`${serverUrl}/api/audit?limit=100`, { signal: AbortSignal.timeout(5000) });
+        if (!r.ok) return;
+        const data = await r.json();
+        if (!cancelled && Array.isArray(data.events)) setLiveAudit(data.events);
+      } catch { /**/ }
+    };
+    const fetchUser = async () => {
+      try {
+        const r = await fetch(`${serverUrl}/auth/me`, { credentials: "include", signal: AbortSignal.timeout(3000) });
+        if (r.ok) { const d = await r.json(); if (!cancelled) setBffUser(d); }
+        else if (!cancelled) setBffUser(null);
+      } catch { /**/ }
+    };
+    fetchAudit();
+    fetchUser();
+    const iv = setInterval(fetchAudit, 30_000);
+    return () => { cancelled = true; clearInterval(iv); };
+  }, [serverUrl]);
 
   const state = useMemo(() => buildState(mode, forceError, liveHealth, liveInfo), [mode, forceError, liveHealth, liveInfo]);
 
@@ -589,7 +648,18 @@ export default function ConsoleA({ mode = "read_only", density = "compact", forc
             </div>
           )}
         </div>
-        <div className="ca-topbar-right"><div className={`ca-mode ca-mode-${state.posture}`}><span className="ca-mode-dot" /><span className="ca-mode-label">{state.label}</span></div></div>
+        <div className="ca-topbar-right" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          {serverUrl && (
+            bffUser
+              ? <div className="ca-topbar-pill" style={{ gap: 6 }}>
+                  <StatusDot tone="ok" />
+                  <span className="mono" style={{ fontSize: 11 }}>{bffUser.user}</span>
+                  <button onClick={async () => { await fetch(`${serverUrl}/auth/logout`, { method: "POST", credentials: "include" }); setBffUser(null); }} style={{ fontFamily: "monospace", fontSize: 10, background: "transparent", border: "1px solid var(--border,#333)", borderRadius: 3, color: "var(--text-dim,#888)", cursor: "pointer", padding: "1px 6px" }}>logout</button>
+                </div>
+              : <a href={`${serverUrl}/auth/login`} style={{ fontFamily: "monospace", fontSize: 11, padding: "3px 10px", border: "1px solid var(--border,#333)", borderRadius: 4, color: "var(--text,#ccc)", textDecoration: "none", background: "transparent" }}>login ↗</a>
+          )}
+          <div className={`ca-mode ca-mode-${state.posture}`}><span className="ca-mode-dot" /><span className="ca-mode-label">{state.label}</span></div>
+        </div>
       </header>
 
       <nav className="ca-tabs">
@@ -604,7 +674,7 @@ export default function ConsoleA({ mode = "read_only", density = "compact", forc
         {tab === "overview" && <OverviewA state={state} forceError={forceError} sparkData={sparkData} />}
         {tab === "tools" && <ToolsA tools={filteredTools} totals={totals} riskFilter={riskFilter} setRiskFilter={setRiskFilter} phaseFilter={phaseFilter} setPhaseFilter={setPhaseFilter} query={query} setQuery={setQuery} rowPad={rowPad} cellFs={cellFs} mode={mode} onOpen={t => setOpenTool(t.name)} searchRef={searchRef} drift={drift} />}
         {tab === "security" && <SecurityA state={state} />}
-        {tab === "audit" && <AuditA rowPad={rowPad} cellFs={cellFs} />}
+        {tab === "audit" && <AuditA rowPad={rowPad} cellFs={cellFs} liveEvents={liveAudit} isLive={!!serverUrl && liveAudit !== null} />}
         {tab === "runbook" && <RunbookA state={state} />}
         {tab === "wizard" && <EnvWizard />}
         {tab === "playground" && <PlaygroundA serverUrl={serverUrl} mode={mode} initialTool={playgroundTool} bearerToken={bearerToken} />}
