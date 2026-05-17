@@ -196,6 +196,7 @@ function ConsoleA({ mode = "read_only", density = "compact", forceError = false,
   const [lastRefreshed, setLastRefreshed] = React.useState(null);
   const [refreshKey, setRefreshKey] = React.useState(0);
   const [latency, setLatency] = React.useState(null);
+  const pingHistoryRef = React.useRef([]);
   const isDemo = !serverUrl || fetchError || liveHealth === null;
 
   useEffect(() => {
@@ -207,7 +208,7 @@ function ConsoleA({ mode = "read_only", density = "compact", forceError = false,
         const r = await fetch(`${serverUrl}/healthz`, { signal: AbortSignal.timeout(5000) });
         if (!r.ok) throw new Error("non-200");
         const data = await r.json();
-        if (!cancelled) { setLiveHealth(data); setFetchError(false); setLastRefreshed(new Date()); setLatency(Math.round(performance.now() - t0)); }
+        if (!cancelled) { setLiveHealth(data); setFetchError(false); setLastRefreshed(new Date()); const ms = Math.round(performance.now() - t0); setLatency(ms); pingHistoryRef.current = [...pingHistoryRef.current.slice(-19), ms]; }
       } catch { if (!cancelled) setFetchError(true); }
     };
     const tok = bearerToken;
@@ -256,8 +257,8 @@ function ConsoleA({ mode = "read_only", density = "compact", forceError = false,
 
   const initial = readHash();
   const [tab, setTab]               = useState(initial.tab);
-  const [riskFilter, setRiskFilter] = useState(initial.risk);
-  const [phaseFilter, setPhaseFilter] = useState(initial.phase);
+  const [riskFilter, setRiskFilter] = useState(() => { try { return localStorage.getItem('mcp-risk-filter') || initial.risk; } catch { return initial.risk; } });
+  const [phaseFilter, setPhaseFilter] = useState(() => { try { return localStorage.getItem('mcp-phase-filter') || initial.phase; } catch { return initial.phase; } });
   const [query, setQuery]           = useState(initial.q);
   const [openTool, setOpenTool]     = useState(initial.tool);
   const [playgroundTool, setPlaygroundTool] = useState(null);
