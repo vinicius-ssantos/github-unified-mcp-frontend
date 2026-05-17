@@ -177,6 +177,22 @@ function PrReadyA({ serverUrl, bearerToken = "" }) {
           <button className="ca-prc-btn" onClick={handleAnalyze} style={{ marginTop: 8 }}>
             ▶ ver demo
           </button>
+          <div className="ca-prc-recents">
+            <div className="ca-prc-recents-label mono">PRs recentes (demo)</div>
+            {[
+              { owner:"vinicius-ssantos", repo:"github-unified-mcp", num:"138", title:"fix: allowlist enforcement — add repo guard" },
+              { owner:"vinicius-ssantos", repo:"github-unified-mcp", num:"142", title:"feat: pr_risk_review tool" },
+              { owner:"vinicius-ssantos", repo:"github-unified-mcp", num:"136", title:"chore: bump tool_schema_version" },
+            ].map(pr => (
+              <button key={pr.num} className="ca-prc-recent-btn" onClick={() => {
+                setOwner(pr.owner); setRepo(pr.repo); setPrNum(pr.num);
+              }}>
+                <span className="ca-prc-recent-num mono">#{pr.num}</span>
+                <span className="ca-prc-recent-title">{pr.title}</span>
+                <span className="ca-prc-recent-repo mono">{pr.repo}</span>
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
