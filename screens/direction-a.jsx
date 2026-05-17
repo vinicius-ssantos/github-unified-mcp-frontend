@@ -730,6 +730,8 @@ function AuditA({ rowPad, cellFs }) {
   const [toolQuery, setToolQuery]     = React.useState("");
   const [streaming, setStreaming]     = React.useState(false);
   const [liveEvents, setLiveEvents]   = React.useState([]);
+  const [timeRange, setTimeRange]     = React.useState("all");
+  const [selectedHour, setSelectedHour] = React.useState(null);
 
   React.useEffect(() => {
     if (!streaming) return;
