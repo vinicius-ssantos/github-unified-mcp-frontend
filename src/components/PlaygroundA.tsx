@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { TOOL_CATALOG } from '../data/tools';
 import { getSchema } from '../data/schemas';
 
-type Props = { serverUrl: string; mode?: string; initialTool?: string | null; bearerToken?: string };
+type Props = { serverUrl: string; mode?: string; initialTool?: string | null; bearerToken?: string; bffRole?: string };
 
 // ── Demo responses ────────────────────────────────────────────────────────────
 
@@ -55,7 +55,12 @@ function RiskBadge({ risk }: { risk: 'low' | 'medium' | 'high' }) {
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export default function PlaygroundA({ serverUrl, initialTool, mode = 'read_only', bearerToken = "" }: Props) {
+function getCsrfToken(): string {
+  const match = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]*)/);
+  return match ? decodeURIComponent(match[1]) : "";
+}
+
+export default function PlaygroundA({ serverUrl, initialTool, mode = 'read_only', bearerToken = "", bffRole }: Props) {
 
   // All non-planned tools — grouped by phase
   const allTools = useMemo(() =>
@@ -149,9 +154,12 @@ export default function PlaygroundA({ serverUrl, initialTool, mode = 'read_only'
         args['confirm'] = 'CONFIRM_DESTRUCTIVE_OPERATION';
       }
       const authHeaders: Record<string, string> = bearerToken ? { "Authorization": `Bearer ${bearerToken}` } : {};
+      const csrf = getCsrfToken();
+      const csrfHeader: Record<string, string> = csrf ? { "X-CSRF-Token": csrf } : {};
       const resp = await fetch(`${serverUrl}/mcp`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...authHeaders },
+        credentials: "include",
+        headers: { "Content-Type": "application/json", ...authHeaders, ...csrfHeader },
         body: JSON.stringify({ jsonrpc: "2.0", id: Date.now(), method: "tools/call", params: { name: selectedTool, arguments: args } }),
         signal: AbortSignal.timeout(10000),
       });
@@ -195,6 +203,11 @@ export default function PlaygroundA({ serverUrl, initialTool, mode = 'read_only'
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {isDemo && <div className="ca-pg-demo-badge mono">DEMO · configure serverUrl nas Settings para chamadas reais</div>}
           {!isDemo && <div className="ca-pg-live-badge mono">LIVE · {serverUrl}</div>}
+          {bffRole && (
+            <div style={{ background: RISK_STYLE[bffRole === 'admin' || bffRole === 'operator' ? 'high' : 'low'].bg, border: `1px solid ${RISK_STYLE[bffRole === 'admin' || bffRole === 'operator' ? 'high' : 'low'].border}`, borderRadius: 5, padding: '3px 8px', fontFamily: 'ui-monospace, monospace', fontSize: 10, color: RISK_STYLE[bffRole === 'admin' || bffRole === 'operator' ? 'high' : 'low'].color }}>
+              BFF · {bffRole}
+            </div>
+          )}
           <div style={{ background: RISK_STYLE[mode === 'operator' ? 'high' : mode === 'write_safe' ? 'medium' : 'low'].bg, border: `1px solid ${RISK_STYLE[mode === 'operator' ? 'high' : mode === 'write_safe' ? 'medium' : 'low'].border}`, borderRadius: 5, padding: '3px 8px', fontFamily: 'ui-monospace, monospace', fontSize: 10, color: RISK_STYLE[mode === 'operator' ? 'high' : mode === 'write_safe' ? 'medium' : 'low'].color }}>
             {mode}
           </div>

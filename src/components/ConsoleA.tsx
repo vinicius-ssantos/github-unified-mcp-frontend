@@ -11,6 +11,11 @@ import type { ToolFlatEntry, DriftInfo, ServerInfoFlags, HealthzResponse, BffAud
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
+function getCsrfToken(): string {
+  const match = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]*)/);
+  return match ? decodeURIComponent(match[1]) : "";
+}
+
 const RISK_TONE = {
   low:    { label: "low",  bg: "rgba(120,200,160,0.14)", fg: "var(--ok)",     border: "rgba(120,200,160,0.30)" },
   medium: { label: "med",  bg: "rgba(220,180,100,0.14)", fg: "var(--warn)",   border: "rgba(220,180,100,0.30)" },
@@ -506,7 +511,9 @@ export default function ConsoleA({ mode = "read_only", density = "compact", forc
     };
     const fetchServerInfo = async () => {
       try {
-        const r = await fetch(`${serverUrl}/mcp`, { method:"POST", headers:{"Content-Type":"application/json",...authHeaders}, body:JSON.stringify({jsonrpc:"2.0",id:1,method:"tools/call",params:{name:"server_info",arguments:{}}}), signal:AbortSignal.timeout(6000) });
+        const csrf = getCsrfToken();
+        const csrfHeader: Record<string, string> = csrf ? { "X-CSRF-Token": csrf } : {};
+        const r = await fetch(`${serverUrl}/mcp`, { method:"POST", credentials:"include", headers:{"Content-Type":"application/json",...authHeaders,...csrfHeader}, body:JSON.stringify({jsonrpc:"2.0",id:1,method:"tools/call",params:{name:"server_info",arguments:{}}}), signal:AbortSignal.timeout(6000) });
         if (!r.ok) return;
         const data = await r.json();
         const result = data?.result?.content?.[0]?.text;
@@ -524,7 +531,9 @@ export default function ConsoleA({ mode = "read_only", density = "compact", forc
     const authHeaders: Record<string, string> = bearerToken ? { "Authorization": `Bearer ${bearerToken}` } : {};
     const fetchToolsList = async () => {
       try {
-        const r = await fetch(`${serverUrl}/mcp`, { method:"POST", headers:{"Content-Type":"application/json",...authHeaders}, body:JSON.stringify({jsonrpc:"2.0",id:99,method:"tools/list",params:{}}), signal:AbortSignal.timeout(8000) });
+        const csrf = getCsrfToken();
+        const csrfHeader: Record<string, string> = csrf ? { "X-CSRF-Token": csrf } : {};
+        const r = await fetch(`${serverUrl}/mcp`, { method:"POST", credentials:"include", headers:{"Content-Type":"application/json",...authHeaders,...csrfHeader}, body:JSON.stringify({jsonrpc:"2.0",id:99,method:"tools/list",params:{}}), signal:AbortSignal.timeout(8000) });
         if (!r.ok) return;
         const data = await r.json();
         const names = (data?.result?.tools ?? []).map((t: { name: string }) => t.name);
@@ -560,6 +569,12 @@ export default function ConsoleA({ mode = "read_only", density = "compact", forc
   }, [serverUrl]);
 
   const state = useMemo(() => buildState(mode, forceError, liveHealth, liveInfo), [mode, forceError, liveHealth, liveInfo]);
+
+  // When logged in as operator/admin via BFF, unlock write/destructive tools in playground
+  const effectiveMode = useMemo(() => {
+    if (bffUser?.role === "admin" || bffUser?.role === "operator") return "operator";
+    return mode;
+  }, [bffUser, mode]);
 
   const initial = readHash();
   const [tab, setTab] = useState(initial.tab);
@@ -677,7 +692,7 @@ export default function ConsoleA({ mode = "read_only", density = "compact", forc
         {tab === "audit" && <AuditA rowPad={rowPad} cellFs={cellFs} liveEvents={liveAudit} isLive={!!serverUrl && liveAudit !== null} />}
         {tab === "runbook" && <RunbookA state={state} />}
         {tab === "wizard" && <EnvWizard />}
-        {tab === "playground" && <PlaygroundA serverUrl={serverUrl} mode={mode} initialTool={playgroundTool} bearerToken={bearerToken} />}
+        {tab === "playground" && <PlaygroundA serverUrl={serverUrl} mode={effectiveMode} initialTool={playgroundTool} bearerToken={bearerToken} bffRole={bffUser?.role} />}
         {tab === "pr" && <PrReadyA serverUrl={serverUrl} mode={mode} bearerToken={bearerToken} />}
         {tab === "vercel" && <VercelDeployTab serverUrl={serverUrl} bearerToken={vercelToken || bearerToken} />}
       </div>

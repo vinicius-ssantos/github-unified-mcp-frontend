@@ -110,6 +110,7 @@ export type BffAuditEvent = {
 export type BffUser = {
   user: string;
   name: string;
+  role: 'viewer' | 'operator' | 'admin';
 };
 
 export type ToolSummary = {
