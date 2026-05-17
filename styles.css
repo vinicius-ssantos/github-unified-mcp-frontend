@@ -687,6 +687,21 @@ body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--
 .ca-prc-recent-title { font-size: 12px; color: var(--text); flex: 1; text-align: left; }
 .ca-prc-recent-repo  { font-size: 10px; color: var(--text-muted); flex-shrink: 0; }
 
+/* ============ AUDIT ACTOR CLICKABLE ============ */
+.ca-actor-clickable { cursor: pointer; transition: color 0.12s; }
+.ca-actor-clickable:hover { color: var(--info) !important; text-decoration: underline; text-decoration-style: dotted; text-underline-offset: 3px; }
+
+/* ============ TIMELINE INTERACTIVE ============ */
+.ca-timeline-col-clickable { cursor: pointer; }
+.ca-timeline-col-clickable:hover .ca-timeline-bar { filter: brightness(1.4); }
+.ca-timeline-col.is-selected .ca-timeline-bar { filter: brightness(1.3); outline: 1px solid var(--info); border-radius: 2px 2px 0 0; }
+
+/* ============ SECURITY: FAILING CELL HIGHLIGHT ============ */
+.ca-sec-cell.is-failing { background: color-mix(in oklch, var(--danger) 6%, var(--surface)); }
+.ca-sec-cell.is-failing .ca-sec-cell-name { color: var(--danger); }
+.ca-sec-cell.is-warn { background: color-mix(in oklch, var(--warn) 6%, var(--surface)); }
+.ca-sec-cell.is-warn .ca-sec-cell-name { color: var(--warn); }
+
 /* Command Palette */
 @keyframes ca-palette-in { from { opacity: 0; transform: translateY(-12px) scale(0.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
 .ca-palette-backdrop { position: fixed; inset: 0; z-index: 1200; background: rgba(0,0,0,0.60); backdrop-filter: blur(4px); display: flex; justify-content: center; align-items: flex-start; padding-top: 14vh; animation: ca-fade 0.12s ease-out; }
