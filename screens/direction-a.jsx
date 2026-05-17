@@ -762,6 +762,18 @@ function AuditA({ rowPad, cellFs }) {
   const filtered   = allEvents.filter(e => {
     if (levelFilter !== "all" && e.level !== levelFilter) return false;
     if (toolQuery && !e.tool.toLowerCase().includes(toolQuery.toLowerCase()) && !e.actor.toLowerCase().includes(toolQuery.toLowerCase())) return false;
+    if (timeRange !== "all" || selectedHour !== null) {
+      const d = new Date(e.ts.replace(' ', 'T'));
+      if (!isNaN(d.getTime())) {
+        const hoursAgo = (Date.now() - d.getTime()) / 3600000;
+        if (selectedHour !== null) {
+          if (hoursAgo < selectedHour || hoursAgo >= selectedHour + 1) return false;
+        } else {
+          const limit = { "1h": 1, "6h": 6, "24h": 24 }[timeRange];
+          if (hoursAgo > limit) return false;
+        }
+      }
+    }
     return true;
   });
   const levelCounts = React.useMemo(() => ({ info:window.AUDIT_EVENTS.filter(e=>e.level==="info").length, warn:window.AUDIT_EVENTS.filter(e=>e.level==="warn").length, error:window.AUDIT_EVENTS.filter(e=>e.level==="error").length }), []);
