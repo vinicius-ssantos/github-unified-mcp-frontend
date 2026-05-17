@@ -93,6 +93,8 @@ function PrReadyA({ serverUrl, bearerToken = "" }) {
   const handleAnalyze = async () => {
     if (loading) return;
     setLoading(true); setResult(null); setError(null);
+    // Persist last used PR
+    try { localStorage.setItem('mcp-pr-owner', owner); localStorage.setItem('mcp-pr-repo', repo); localStorage.setItem('mcp-pr-num', prNum); } catch {}
 
     if (isDemo) {
       await new Promise(r => setTimeout(r, 550));
