@@ -213,7 +213,7 @@ test.describe('Settings panel', () => {
 
     await page.getByTitle('Configurações').click();
     await expect(page.getByText('configurações do painel')).toBeVisible();
-    await expect(page.getByPlaceholder('https://github-unified-mcp.onrender.com')).toBeVisible();
+    await expect(page.getByPlaceholder('https://github-unified-mcp-bff.onrender.com')).toBeVisible();
 
     await page.getByRole('button', { name: 'cancelar' }).click();
     await expect(page.getByText('configurações do painel')).not.toBeVisible();
