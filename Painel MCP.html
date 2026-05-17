@@ -37,7 +37,8 @@ const DEFAULTS = /*EDITMODE-BEGIN*/{
   "serverUrl": "",
   "bearerToken": "",
   "view": "console",
-  "vercelToken": ""
+  "vercelToken": "",
+  "lightMode": false
 }/*EDITMODE-END*/;
 
 function App() {
@@ -45,12 +46,17 @@ function App() {
   const ConsoleA = window.ConsoleA;
   const PanelB = window.PanelB;
 
+  // Apply light/dark theme to document root
+  React.useEffect(() => {
+    document.documentElement.setAttribute('data-theme', tweaks.lightMode ? 'light' : 'dark');
+  }, [tweaks.lightMode]);
+
   return (
     <>
       {tweaks.view === "calm" && PanelB
         ? <PanelB mode={tweaks.mode} />
         : ConsoleA
-          ? <ConsoleA mode={tweaks.mode} density={tweaks.density} forceError={tweaks.errorState} serverUrl={tweaks.serverUrl} bearerToken={tweaks.bearerToken} />
+          ? <ConsoleA mode={tweaks.mode} density={tweaks.density} forceError={tweaks.errorState} serverUrl={tweaks.serverUrl} bearerToken={tweaks.bearerToken} lightMode={tweaks.lightMode} />
           : <div style={{color:'var(--text)',padding:40,fontFamily:'monospace'}}>Carregando…</div>
       }
 
@@ -89,6 +95,12 @@ function App() {
             />
           </window.TweakSection>
           <window.TweakSection title="Aparência">
+            <window.TweakToggle
+              label="Modo claro"
+              value={tweaks.lightMode}
+              onChange={(v) => setTweak('lightMode', v)}
+              hint="Alterna entre tema escuro (padrão) e claro"
+            />
             <window.TweakRadio
               label="Layout"
               value={tweaks.view}
