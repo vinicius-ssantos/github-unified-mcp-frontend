@@ -829,7 +829,7 @@ function AuditA({ rowPad, cellFs }) {
         <tbody>
           {filtered.map((e,i) => (
             <tr key={e._id||i} className={e._live?"ca-live-row":""}>
-              <td className="mono ca-audit-ts">{e.ts}</td><td className="mono">{e.actor}</td><td className="mono ca-audit-tool">{e.tool}</td><td className="mono ca-audit-target">{e.target}</td>
+              <td className="mono ca-audit-ts">{e.ts}</td><td className="mono ca-actor-clickable" onClick={()=>setToolQuery(e.actor)} title={`filtrar: ${e.actor}`}>{e.actor}</td><td className="mono ca-audit-tool">{e.tool}</td><td className="mono ca-audit-target">{e.target}</td>
               <td><span className={`ca-decision ca-decision-${e.level}`}><StatusDot tone={e.level==="info"?"ok":e.level==="warn"?"warn":"danger"} />{e.decision}</span></td>
               <td className="mono ca-audit-reason">{e.reason||"—"}</td>
             </tr>
