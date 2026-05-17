@@ -1,5 +1,16 @@
 // Drawer + shortcut handling extension to direction A.
 
+function drawerHighlightJSON(str) {
+  const esc = str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return esc.replace(/(["'])(\\.|[^\1])*?\1(\s*:)?|\b(true|false|null)\b|-?\d+\.?\d*/g,
+    function(m) {
+      if (/^["']/.test(m)) return /:$/.test(m) ? '<span class="json-k">' + m + '<\/span>' : '<span class="json-s">' + m + '<\/span>';
+      if (/true|false/.test(m)) return '<span class="json-b">' + m + '<\/span>';
+      if (/null/.test(m)) return '<span class="json-n">' + m + '<\/span>';
+      return '<span class="json-num">' + m + '<\/span>';
+    });
+}
+
 function guardChain(tool, state) {
   const chain = [
     { step: "01", name: "Allowlist de repositórios", pass: state.server_info.require_allowed_repos, note: "GITHUB_REQUIRE_ALLOWED_REPOS=true" },
@@ -106,7 +117,7 @@ function ToolDrawer({ tool, mode, onClose, onPlayground }) {
               <span className="mono">MCP call</span>
               <button className="ca-copy" onClick={() => copy(mcpCall)}>copy</button>
             </div>
-            <pre className="ca-codeblock mono">{mcpCall}</pre>
+            <pre className="ca-codeblock mono" dangerouslySetInnerHTML={{ __html: drawerHighlightJSON(mcpCall) }} />
           </section>
 
           <section className="ca-drawer-sec">
