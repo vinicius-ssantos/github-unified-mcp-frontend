@@ -8,7 +8,7 @@ type Settings = { serverUrl: string; bearerToken: string; mode: Mode; density: D
 const STORAGE_KEY = 'mcp-panel-settings';
 
 function defaultSettings(): Settings {
-  return { serverUrl: '', bearerToken: '', mode: 'read_only', density: 'compact', forceError: false, vercelToken: '' };
+  return { serverUrl: import.meta.env.VITE_MCP_URL || '', bearerToken: '', mode: 'read_only', density: 'compact', forceError: false, vercelToken: '' };
 }
 
 function loadSettings(): Settings {
