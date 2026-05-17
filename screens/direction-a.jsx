@@ -795,6 +795,8 @@ function AuditA({ rowPad, cellFs }) {
           </div>
         ))}
       </div>
+      <AuditTimeline events={window.AUDIT_EVENTS} selectedHour={selectedHour} onSelectHour={setSelectedHour} />
+
       <div className="ca-audit-filter-bar">
         <div className="ca-tools-pills">
           <span className="ca-tools-pills-label mono">level</span>
@@ -802,8 +804,18 @@ function AuditA({ rowPad, cellFs }) {
             <button key={k} className={`ca-tools-pill ${levelFilter===k?"is-active":""}`} onClick={()=>setLevelFilter(k)}>{label}</button>
           ))}
         </div>
+        <div className="ca-tools-pills">
+          <span className="ca-tools-pills-label mono">período</span>
+          {[["all","all"],["1h","1h"],["6h","6h"],["24h","24h"]].map(([k,label]) => (
+            <button key={k} className={`ca-tools-pill ${timeRange===k&&selectedHour===null?"is-active":""}`}
+              onClick={() => { setTimeRange(k); setSelectedHour(null); }}>{label}</button>
+          ))}
+          {selectedHour !== null && (
+            <button className="ca-tools-pill is-active" onClick={() => setSelectedHour(null)}>{selectedHour}h atrás ×</button>
+          )}
+        </div>
         <div className="ca-tools-search"><span className="mono ca-tools-search-prompt">grep</span><input value={toolQuery} onChange={e=>setToolQuery(e.target.value)} placeholder="filtrar por tool ou actor…" /></div>
-        {(levelFilter !== "all" || toolQuery) && <button className="ca-tools-pill" onClick={()=>{setLevelFilter("all");setToolQuery("");}}>× limpar</button>}
+        {(levelFilter !== "all" || toolQuery || timeRange !== "all" || selectedHour !== null) && <button className="ca-tools-pill" onClick={()=>{setLevelFilter("all");setToolQuery("");setTimeRange("all");setSelectedHour(null);}}>× limpar</button>}
         <button className={`ca-live-btn ${streaming?"ca-live-btn-on":"ca-live-btn-off"}`} onClick={()=>setStreaming(s=>!s)}>
           {streaming && <span className="ca-live-dot" />}{streaming?"LIVE":"○ live"}
         </button>
