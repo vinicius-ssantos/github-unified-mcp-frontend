@@ -108,7 +108,11 @@ function PlaygroundA({ serverUrl, mode, initialTool, bearerToken = "" }) {
 
   const handleSelectTool = (name) => {
     setSelectedTool(name);
-    setFormArgs({});
+    // Restore last args used for this tool
+    try {
+      const saved = JSON.parse(localStorage.getItem(`mcp-args-${name}`) || 'null');
+      setFormArgs(saved || {});
+    } catch { setFormArgs({}); }
     setResultDisplay(null);
     setCallError(null);
   };
@@ -125,6 +129,8 @@ function PlaygroundA({ serverUrl, mode, initialTool, bearerToken = "" }) {
     setCallError(null);
     const ts = new Date().toISOString().slice(11, 19);
 
+    // Save args for this tool
+    try { localStorage.setItem(`mcp-args-${selectedTool}`, JSON.stringify(formArgs)); } catch {}
     if (isDemo) {
       await new Promise(r => setTimeout(r, 320));
       const mock = generateDemoResponse(selectedTool, formArgs);
