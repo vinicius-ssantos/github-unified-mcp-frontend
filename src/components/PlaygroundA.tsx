@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { TOOL_CATALOG } from '../data/tools';
 import { getSchema } from '../data/schemas';
+import { callBffTool } from '../adapters/bffClient';
 
 type Props = { serverUrl: string; mode?: string; initialTool?: string | null; bearerToken?: string; bffRole?: string };
 
@@ -71,13 +72,6 @@ function syntaxHighlight(json: string): string {
       return `<span style="color:#f0b429">${match}</span>`;
     }
   );
-}
-
-// ── CSRF helper ───────────────────────────────────────────────────────────────
-
-function getCsrfToken(): string {
-  const match = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]*)/);
-  return match ? decodeURIComponent(match[1]) : "";
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
@@ -196,22 +190,8 @@ export default function PlaygroundA({ serverUrl, initialTool, mode = 'read_only'
           args[inp.name] = formArgs[inp.name];
       });
       if (activeTool?.requiresConfirm) args['confirm'] = 'CONFIRM_DESTRUCTIVE_OPERATION';
-      const authHeaders: Record<string, string> = bearerToken ? { "Authorization": `Bearer ${bearerToken}` } : {};
-      const csrf = getCsrfToken();
-      const csrfHeader: Record<string, string> = csrf ? { "X-CSRF-Token": csrf } : {};
-      const resp = await fetch(`${serverUrl}/mcp`, {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json", ...authHeaders, ...csrfHeader },
-        body: JSON.stringify({ jsonrpc: "2.0", id: Date.now(), method: "tools/call", params: { name: selectedTool, arguments: args } }),
-        signal: AbortSignal.timeout(10000),
-      });
-      if (!resp.ok) throw new Error(`HTTP ${resp.status} ${resp.statusText}`);
-      const data = await resp.json();
-      if (data.error) throw new Error(`MCP error ${data.error.code}: ${data.error.message}`);
-      const raw = data?.result?.content?.[0]?.text ?? JSON.stringify(data.result, null, 2);
-      let parsed: string;
-      try { parsed = JSON.stringify(JSON.parse(raw), null, 2); } catch { parsed = raw; }
+      const data = await callBffTool<unknown>(serverUrl, selectedTool, args, { bearerToken, timeoutMs: 10000 });
+      const parsed = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
       const ms = Date.now() - t0;
       setResultDisplay(parsed);
       setLatencyMs(ms);
