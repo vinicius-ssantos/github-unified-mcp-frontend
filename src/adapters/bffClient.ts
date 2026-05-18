@@ -1,3 +1,5 @@
+import type { BffUser } from '../types/mcp';
+
 type JsonRpcContent = { type?: string; text?: string };
 type JsonRpcResult = { content?: JsonRpcContent[] } | unknown;
 type JsonRpcEnvelope = { result?: JsonRpcResult; error?: { code?: number; message?: string } | string };
@@ -5,12 +7,6 @@ type JsonRpcEnvelope = { result?: JsonRpcResult; error?: { code?: number; messag
 export type BffCallOptions = {
   timeoutMs?: number;
   bearerToken?: string;
-};
-
-export type BffUserSession = {
-  user: string;
-  name?: string | null;
-  role?: string | null;
 };
 
 export type BffAuditResponse<TEvent = unknown> = {
@@ -67,7 +63,7 @@ function csrfHeaders(): Record<string, string> {
   return csrf ? { 'X-CSRF-Token': csrf } : {};
 }
 
-export async function fetchBffSession(serverUrl: string, timeoutMs = 3000): Promise<BffUserSession | null> {
+export async function fetchBffSession(serverUrl: string, timeoutMs = 3000): Promise<BffUser | null> {
   const resp = await fetch(`${bffBase(serverUrl)}/auth/me`, {
     credentials: 'include',
     headers: { Accept: 'application/json' },
@@ -75,7 +71,7 @@ export async function fetchBffSession(serverUrl: string, timeoutMs = 3000): Prom
   });
   if (resp.status === 401) return null;
   if (!resp.ok) throw new Error(`${errorLabel(resp.status)} (${resp.status}): ${await parseError(resp)}`);
-  return (await resp.json()) as BffUserSession;
+  return (await resp.json()) as BffUser;
 }
 
 export async function logoutBffSession(serverUrl: string, timeoutMs = 5000): Promise<void> {
