@@ -87,9 +87,8 @@ export async function logoutBffSession(serverUrl: string, timeoutMs = 5000): Pro
 }
 
 export async function fetchBffAudit<TEvent = unknown>(serverUrl: string, limit = 100, timeoutMs = 5000): Promise<BffAuditResponse<TEvent>> {
-  const url = new URL(`${bffBase(serverUrl)}/api/audit`);
-  url.searchParams.set('limit', String(limit));
-  const resp = await fetch(url.toString(), {
+  const query = new URLSearchParams({ limit: String(limit) });
+  const resp = await fetch(`${bffBase(serverUrl)}/api/audit?${query.toString()}`, {
     credentials: 'include',
     headers: { Accept: 'application/json' },
     signal: AbortSignal.timeout(timeoutMs),
