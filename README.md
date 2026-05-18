@@ -273,6 +273,17 @@ VITE_MCP_URL=https://<github-unified-mcp-bff>.onrender.com
 
 Do not put MCP, GitHub, or Vercel tokens in frontend environment variables. Production credentials belong in the BFF. The browser-side settings panel does not persist bearer or Vercel tokens.
 
+Live tool execution should use the BFF structured endpoint:
+
+```http
+POST /api/mcp/call
+Content-Type: application/json
+
+{ "name": "server_info", "arguments": {} }
+```
+
+The raw `/mcp` JSON-RPC endpoint is reserved for dev/debug or lower-level runtime methods until the BFF capabilities/tool-policy contract is complete.
+
 ## Build
 
 ```bash

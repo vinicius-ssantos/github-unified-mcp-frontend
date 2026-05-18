@@ -5,6 +5,7 @@ import EnvWizard from './EnvWizard';
 import PlaygroundA from './PlaygroundA';
 import PrReadyA from './PrReadyA';
 import VercelDeployTab from './VercelDeployTab';
+import { callBffTool } from '../adapters/bffClient';
 import { TOOL_CATALOG } from '../data/tools';
 import { SERVER_STATES, ENV_CONFIG, AUDIT_EVENTS, RATE_LIMITS } from '../data/serverState';
 import type { ToolFlatEntry, DriftInfo, ServerInfoFlags, HealthzResponse, BffAuditEvent, BffUser } from '../types/mcp';
@@ -733,13 +734,8 @@ export default function ConsoleA({ mode = "read_only", density = "compact", forc
     };
     const fetchServerInfo = async () => {
       try {
-        const csrf = getCsrfToken();
-        const csrfHeader: Record<string, string> = csrf ? { "X-CSRF-Token": csrf } : {};
-        const r = await fetch(`${serverUrl}/mcp`, { method:"POST", credentials:"include", headers:{"Content-Type":"application/json",...authHeaders,...csrfHeader}, body:JSON.stringify({jsonrpc:"2.0",id:1,method:"tools/call",params:{name:"server_info",arguments:{}}}), signal:AbortSignal.timeout(6000) });
-        if (!r.ok) return;
-        const data = await r.json();
-        const result = data?.result?.content?.[0]?.text;
-        if (result && !cancelled) { try { setLiveInfo(JSON.parse(result)); } catch { /**/ } }
+        const info = await callBffTool<Partial<ServerInfoFlags>>(serverUrl, "server_info", {}, { bearerToken, timeoutMs: 6000 });
+        if (!cancelled) setLiveInfo(info);
       } catch { /**/ }
     };
     fetchHealth(); fetchServerInfo();
