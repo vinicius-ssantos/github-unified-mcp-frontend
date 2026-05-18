@@ -111,7 +111,7 @@ test.describe('Tool drawer', () => {
     await page.keyboard.press('t');
 
     // Click on server_info tool row
-    await page.getByText('server_info').first().click();
+    await page.locator('.ca-tools-row', { hasText: 'server_info' }).first().click();
 
     // Drawer should open
     await expect(page.getByText('guard chain')).toBeVisible();
@@ -132,7 +132,7 @@ test.describe('Tool drawer', () => {
     await page.keyboard.press('g');
     await page.keyboard.press('t');
 
-    await page.getByText('server_info').first().click();
+    await page.locator('.ca-tools-row', { hasText: 'server_info' }).first().click();
 
     await expect(page.getByRole('button', { name: /playground/ })).toBeVisible();
   });
@@ -143,7 +143,7 @@ test.describe('Tool drawer', () => {
     await page.keyboard.press('g');
     await page.keyboard.press('t');
 
-    await page.getByText('server_info').first().click();
+    await page.locator('.ca-tools-row', { hasText: 'server_info' }).first().click();
     await expect(page.getByText('guard chain')).toBeVisible();
 
     await page.keyboard.press('Escape');
