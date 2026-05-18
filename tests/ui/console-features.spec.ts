@@ -29,8 +29,7 @@ test.describe('PR Readiness Cockpit', () => {
   test('runs demo analysis and shows recommendation banner', async ({ page }) => {
     await page.goto('/');
 
-    await page.keyboard.press('g');
-    await page.keyboard.press('b');
+    await page.getByRole('button', { name: /PR Readiness/ }).click();
 
     await expect(page.getByText('PR Readiness Cockpit')).toBeVisible();
 
@@ -57,8 +56,7 @@ test.describe('PR Readiness Cockpit', () => {
   test('shows field inputs for owner, repo and PR number', async ({ page }) => {
     await page.goto('/');
 
-    await page.keyboard.press('g');
-    await page.keyboard.press('b');
+    await page.getByRole('button', { name: /PR Readiness/ }).click();
 
     await expect(page.getByPlaceholder('owner')).toBeVisible();
     await expect(page.getByPlaceholder('repo')).toBeVisible();
@@ -70,8 +68,7 @@ test.describe('Playground', () => {
   test('shows tool list and executes demo', async ({ page }) => {
     await page.goto('/');
 
-    await page.keyboard.press('g');
-    await page.keyboard.press('p');
+    await page.getByRole('button', { name: /Playground/ }).click();
 
     // Tool list sidebar
     await expect(page.getByText('server_info').first()).toBeVisible();
@@ -90,8 +87,7 @@ test.describe('Playground', () => {
   test('switches tool and clears result', async ({ page }) => {
     await page.goto('/');
 
-    await page.keyboard.press('g');
-    await page.keyboard.press('p');
+    await page.getByRole('button', { name: /Playground/ }).click();
 
     // Execute first tool
     await page.getByRole('button', { name: /executar/ }).click();
