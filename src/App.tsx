@@ -5,23 +5,37 @@ type Mode = 'read_only' | 'write_safe' | 'operator';
 type Density = 'compact' | 'comfortable';
 type Theme = 'dark' | 'light';
 type Settings = { serverUrl: string; bearerToken: string; mode: Mode; density: Density; forceError: boolean; vercelToken: string; theme: Theme };
+type RuntimeMode = 'development' | 'production';
 
 const STORAGE_KEY = 'mcp-panel-settings';
+const RUNTIME_MODE = ((import.meta.env.VITE_RUNTIME_MODE as string | undefined) || (import.meta.env.PROD ? 'production' : 'development')) as RuntimeMode;
+const IS_PRODUCTION_RUNTIME = RUNTIME_MODE === 'production';
 
 function defaultSettings(): Settings {
   return { serverUrl: import.meta.env.VITE_MCP_URL || '', bearerToken: '', mode: 'read_only', density: 'compact', forceError: false, vercelToken: '', theme: 'dark' };
 }
 
+function stripSensitiveSettings(s: Settings): Settings {
+  return { ...s, bearerToken: '', vercelToken: '' };
+}
+
 function loadSettings(): Settings {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return { ...defaultSettings(), ...JSON.parse(raw) };
+    if (raw) {
+      const loaded = { ...defaultSettings(), ...JSON.parse(raw) };
+      const safe = stripSensitiveSettings(loaded);
+      if (loaded.bearerToken || loaded.vercelToken) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(safe));
+      }
+      return safe;
+    }
   } catch { /**/ }
   return defaultSettings();
 }
 
 function saveSettings(s: Settings) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); } catch { /**/ }
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(stripSensitiveSettings(s))); } catch { /**/ }
 }
 
 function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
@@ -74,14 +88,14 @@ export function App() {
         density={settings.density}
         forceError={settings.forceError}
         serverUrl={settings.serverUrl}
-        bearerToken={settings.bearerToken}
-        vercelToken={settings.vercelToken}
+        bearerToken={IS_PRODUCTION_RUNTIME ? '' : settings.bearerToken}
+        vercelToken={IS_PRODUCTION_RUNTIME ? '' : settings.vercelToken}
       />
 
       <button
         onClick={() => { setDraft(settings); setSettingsOpen(true); }}
         title="Configurações"
-        style={{ position: 'fixed', bottom: 16, right: 16, zIndex: 900, background: 'var(--surface-2,#1e1e1e)', border: '1px solid var(--border,#333)', borderRadius: 6, color: 'var(--text,#ccc)', padding: '6px 12px', cursor: 'pointer', fontFamily: 'monospace', fontSize: 12 }}
+        style={{ position: 'fixed', bottom: 16, right: 16, zIndex: 5000, background: 'var(--surface-2,#1e1e1e)', border: '1px solid var(--border,#333)', borderRadius: 6, color: 'var(--text,#ccc)', padding: '6px 12px', cursor: 'pointer', fontFamily: 'monospace', fontSize: 12 }}
       >⚙ settings</button>
 
       {settingsOpen && (
@@ -89,17 +103,25 @@ export function App() {
           <div style={{ background: 'var(--surface,#141414)', border: '1px solid var(--border,#333)', borderRadius: 8, padding: 24, minWidth: 360, maxWidth: 480, display: 'flex', flexDirection: 'column', gap: 14 }} onClick={e => e.stopPropagation()}>
             <div style={{ fontFamily: 'monospace', fontSize: 14, color: 'var(--text,#ccc)', marginBottom: 4 }}>configurações do painel</div>
 
-            <Field label="URL do servidor" hint="Deixe vazio para modo demo">
-              <input style={{ fontFamily: 'monospace', fontSize: 12, padding: '5px 8px', background: 'var(--surface-2,#1e1e1e)', border: '1px solid var(--border,#333)', borderRadius: 4, color: 'var(--text,#ccc)', width: '100%', boxSizing: 'border-box' }} value={draft.serverUrl} onChange={e => setDraft(d => ({ ...d, serverUrl: e.target.value }))} placeholder="https://github-unified-mcp.onrender.com" />
+            <Field label="URL do servidor" hint={IS_PRODUCTION_RUNTIME ? "URL do BFF em produção; deixe vazio apenas para demo local" : "Deixe vazio para modo demo"}>
+              <input style={{ fontFamily: 'monospace', fontSize: 12, padding: '5px 8px', background: 'var(--surface-2,#1e1e1e)', border: '1px solid var(--border,#333)', borderRadius: 4, color: 'var(--text,#ccc)', width: '100%', boxSizing: 'border-box' }} value={draft.serverUrl} onChange={e => setDraft(d => ({ ...d, serverUrl: e.target.value }))} placeholder="https://github-unified-mcp-bff.onrender.com" />
             </Field>
 
-            <Field label="Bearer token" hint="Necessário quando MCP_AUTH_MODE=bearer">
-              <input type="password" style={{ fontFamily: 'monospace', fontSize: 12, padding: '5px 8px', background: 'var(--surface-2,#1e1e1e)', border: '1px solid var(--border,#333)', borderRadius: 4, color: 'var(--text,#ccc)', width: '100%', boxSizing: 'border-box' }} value={draft.bearerToken} onChange={e => setDraft(d => ({ ...d, bearerToken: e.target.value }))} placeholder="mcp_..." />
-            </Field>
+            <div style={{ fontFamily: 'monospace', fontSize: 11, color: IS_PRODUCTION_RUNTIME ? 'var(--ok,#4caf50)' : 'var(--warn,#f0b429)', border: '1px solid var(--border,#333)', borderRadius: 4, padding: '7px 8px', background: 'var(--surface-2,#1e1e1e)' }}>
+              runtime: {RUNTIME_MODE} · {IS_PRODUCTION_RUNTIME ? 'tokens desabilitados no browser; use o BFF' : 'tokens de dev ficam apenas em memória e não são persistidos'}
+            </div>
 
-            <Field label="Vercel token" hint="Opcional — para a aba Vercel ▲">
-              <input type="password" style={{ fontFamily: 'monospace', fontSize: 12, padding: '5px 8px', background: 'var(--surface-2,#1e1e1e)', border: '1px solid var(--border,#333)', borderRadius: 4, color: 'var(--text,#ccc)', width: '100%', boxSizing: 'border-box' }} value={draft.vercelToken} onChange={e => setDraft(d => ({ ...d, vercelToken: e.target.value }))} placeholder="vercel_..." />
-            </Field>
+            {!IS_PRODUCTION_RUNTIME && (
+              <>
+                <Field label="Bearer token (dev only)" hint="Opcional em dev. Mantido apenas em memória; nunca salvo no localStorage.">
+                  <input type="password" style={{ fontFamily: 'monospace', fontSize: 12, padding: '5px 8px', background: 'var(--surface-2,#1e1e1e)', border: '1px solid var(--border,#333)', borderRadius: 4, color: 'var(--text,#ccc)', width: '100%', boxSizing: 'border-box' }} value={draft.bearerToken} onChange={e => setDraft(d => ({ ...d, bearerToken: e.target.value }))} placeholder="mcp_..." />
+                </Field>
+
+                <Field label="Vercel token (dev only)" hint="Opcional em dev. Mantido apenas em memória; use BFF para produção.">
+                  <input type="password" style={{ fontFamily: 'monospace', fontSize: 12, padding: '5px 8px', background: 'var(--surface-2,#1e1e1e)', border: '1px solid var(--border,#333)', borderRadius: 4, color: 'var(--text,#ccc)', width: '100%', boxSizing: 'border-box' }} value={draft.vercelToken} onChange={e => setDraft(d => ({ ...d, vercelToken: e.target.value }))} placeholder="vercel_..." />
+                </Field>
+              </>
+            )}
 
             <Field label="Postura (demo)">
               <div style={{ display: 'flex', gap: 6 }}>

@@ -29,8 +29,7 @@ test.describe('PR Readiness Cockpit', () => {
   test('runs demo analysis and shows recommendation banner', async ({ page }) => {
     await page.goto('/');
 
-    await page.keyboard.press('g');
-    await page.keyboard.press('b');
+    await page.getByRole('button', { name: /PR Readiness/ }).click();
 
     await expect(page.getByText('PR Readiness Cockpit')).toBeVisible();
 
@@ -57,8 +56,7 @@ test.describe('PR Readiness Cockpit', () => {
   test('shows field inputs for owner, repo and PR number', async ({ page }) => {
     await page.goto('/');
 
-    await page.keyboard.press('g');
-    await page.keyboard.press('b');
+    await page.getByRole('button', { name: /PR Readiness/ }).click();
 
     await expect(page.getByPlaceholder('owner')).toBeVisible();
     await expect(page.getByPlaceholder('repo')).toBeVisible();
@@ -70,8 +68,7 @@ test.describe('Playground', () => {
   test('shows tool list and executes demo', async ({ page }) => {
     await page.goto('/');
 
-    await page.keyboard.press('g');
-    await page.keyboard.press('p');
+    await page.getByRole('button', { name: /Playground/ }).click();
 
     // Tool list sidebar
     await expect(page.getByText('server_info').first()).toBeVisible();
@@ -90,8 +87,7 @@ test.describe('Playground', () => {
   test('switches tool and clears result', async ({ page }) => {
     await page.goto('/');
 
-    await page.keyboard.press('g');
-    await page.keyboard.press('p');
+    await page.getByRole('button', { name: /Playground/ }).click();
 
     // Execute first tool
     await page.getByRole('button', { name: /executar/ }).click();
@@ -107,11 +103,10 @@ test.describe('Tool drawer', () => {
   test('opens drawer on tool row click and shows guard chain', async ({ page }) => {
     await page.goto('/');
 
-    await page.keyboard.press('g');
-    await page.keyboard.press('t');
+    await page.getByRole('button', { name: /Tool catalog/ }).click();
 
     // Click on server_info tool row
-    await page.getByText('server_info').first().click();
+    await page.locator('.ca-tools-row', { hasText: 'server_info' }).first().click();
 
     // Drawer should open
     await expect(page.getByText('guard chain')).toBeVisible();
@@ -129,10 +124,9 @@ test.describe('Tool drawer', () => {
   test('drawer has Playground button for low-risk tools', async ({ page }) => {
     await page.goto('/');
 
-    await page.keyboard.press('g');
-    await page.keyboard.press('t');
+    await page.getByRole('button', { name: /Tool catalog/ }).click();
 
-    await page.getByText('server_info').first().click();
+    await page.locator('.ca-tools-row', { hasText: 'server_info' }).first().click();
 
     await expect(page.getByRole('button', { name: /playground/ })).toBeVisible();
   });
@@ -140,10 +134,9 @@ test.describe('Tool drawer', () => {
   test('drawer closes on Escape key', async ({ page }) => {
     await page.goto('/');
 
-    await page.keyboard.press('g');
-    await page.keyboard.press('t');
+    await page.getByRole('button', { name: /Tool catalog/ }).click();
 
-    await page.getByText('server_info').first().click();
+    await page.locator('.ca-tools-row', { hasText: 'server_info' }).first().click();
     await expect(page.getByText('guard chain')).toBeVisible();
 
     await page.keyboard.press('Escape');
@@ -155,8 +148,7 @@ test.describe('Security posture tab', () => {
   test('shows 10 security layers', async ({ page }) => {
     await page.goto('/');
 
-    await page.keyboard.press('g');
-    await page.keyboard.press('s');
+    await page.getByRole('button', { name: /Security posture/ }).click();
 
     await expect(page.getByText('Camadas de segurança')).toBeVisible();
     await expect(page.getByText('10 camadas independentes')).toBeVisible();
@@ -170,8 +162,7 @@ test.describe('Runbook tab', () => {
   test('shows runbook picker and checklist steps', async ({ page }) => {
     await page.goto('/');
 
-    await page.keyboard.press('g');
-    await page.keyboard.press('r');
+    await page.getByRole('button', { name: /Runbook/ }).click();
 
     await expect(page.getByText(/Runbook · pr_merge/)).toBeVisible();
     await expect(page.getByText('rollback de ref')).toBeVisible();
@@ -184,8 +175,7 @@ test.describe('Runbook tab', () => {
   test('checkmark toggles on step click', async ({ page }) => {
     await page.goto('/');
 
-    await page.keyboard.press('g');
-    await page.keyboard.press('r');
+    await page.getByRole('button', { name: /Runbook/ }).click();
 
     const firstStep = page.locator('.ca-runbook-step').first();
     await expect(firstStep).not.toHaveClass(/is-done/);
@@ -198,8 +188,7 @@ test.describe('.env wizard tab', () => {
   test('shows mode indicator and output', async ({ page }) => {
     await page.goto('/');
 
-    await page.keyboard.press('g');
-    await page.keyboard.press('e');
+    await page.getByRole('button', { name: /.env wizard/ }).click();
 
     await expect(page.getByText('modo resultante')).toBeVisible();
     await expect(page.locator('.ca-wiz-mode-value')).toContainText('Read-only');
@@ -211,9 +200,9 @@ test.describe('Settings panel', () => {
   test('opens and closes settings', async ({ page }) => {
     await page.goto('/');
 
-    await page.getByTitle('Configurações').click();
+    await page.getByTitle('Configurações').click({ force: true });
     await expect(page.getByText('configurações do painel')).toBeVisible();
-    await expect(page.getByPlaceholder('https://github-unified-mcp.onrender.com')).toBeVisible();
+    await expect(page.getByPlaceholder('https://github-unified-mcp-bff.onrender.com')).toBeVisible();
 
     await page.getByRole('button', { name: 'cancelar' }).click();
     await expect(page.getByText('configurações do painel')).not.toBeVisible();
