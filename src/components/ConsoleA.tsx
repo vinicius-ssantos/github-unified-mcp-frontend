@@ -5,17 +5,12 @@ import EnvWizard from './EnvWizard';
 import PlaygroundA from './PlaygroundA';
 import PrReadyA from './PrReadyA';
 import VercelDeployTab from './VercelDeployTab';
-import { callBffTool } from '../adapters/bffClient';
+import { callBffTool, fetchBffAudit, fetchBffSession, getCsrfToken, logoutBffSession } from '../adapters/bffClient';
 import { TOOL_CATALOG } from '../data/tools';
 import { SERVER_STATES, ENV_CONFIG, AUDIT_EVENTS, RATE_LIMITS } from '../data/serverState';
 import type { ToolFlatEntry, DriftInfo, ServerInfoFlags, HealthzResponse, BffAuditEvent, BffUser } from '../types/mcp';
 
 // ── helpers ───────────────────────────────────────────────────────────────────
-
-function getCsrfToken(): string {
-  const match = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]*)/);
-  return match ? decodeURIComponent(match[1]) : "";
-}
 
 const RISK_TONE = {
   low:    { label: "low",  bg: "rgba(120,200,160,0.14)", fg: "var(--ok)",     border: "rgba(120,200,160,0.30)" },
@@ -767,18 +762,15 @@ export default function ConsoleA({ mode = "read_only", density = "compact", forc
     let cancelled = false;
     const fetchAudit = async () => {
       try {
-        const r = await fetch(`${serverUrl}/api/audit?limit=100`, { signal: AbortSignal.timeout(5000) });
-        if (!r.ok) return;
-        const data = await r.json();
+        const data = await fetchBffAudit<BffAuditEvent>(serverUrl, 100, 5000);
         if (!cancelled && Array.isArray(data.events)) setLiveAudit(data.events);
-      } catch { /**/ }
+      } catch { if (!cancelled) setLiveAudit(null); }
     };
     const fetchUser = async () => {
       try {
-        const r = await fetch(`${serverUrl}/auth/me`, { credentials: "include", signal: AbortSignal.timeout(3000) });
-        if (r.ok) { const d = await r.json(); if (!cancelled) setBffUser(d); }
-        else if (!cancelled) setBffUser(null);
-      } catch { /**/ }
+        const session = await fetchBffSession(serverUrl, 3000);
+        if (!cancelled) setBffUser(session);
+      } catch { if (!cancelled) setBffUser(null); }
     };
     fetchAudit();
     fetchUser();
@@ -914,9 +906,9 @@ export default function ConsoleA({ mode = "read_only", density = "compact", forc
               ? <div className="ca-topbar-pill" style={{ gap: 6 }}>
                   <StatusDot tone="ok" />
                   <span className="mono" style={{ fontSize: 11 }}>{bffUser.user}</span>
-                  <button onClick={async () => { await fetch(`${serverUrl}/auth/logout`, { method: "POST", credentials: "include" }); setBffUser(null); }} style={{ fontFamily: "monospace", fontSize: 10, background: "transparent", border: "1px solid var(--border,#333)", borderRadius: 3, color: "var(--text-dim,#888)", cursor: "pointer", padding: "1px 6px" }}>logout</button>
+                  <button onClick={async () => { try { await logoutBffSession(serverUrl); } finally { setBffUser(null); setLiveAudit(null); } }} style={{ fontFamily: "monospace", fontSize: 10, background: "transparent", border: "1px solid var(--border,#333)", borderRadius: 3, color: "var(--text-dim,#888)", cursor: "pointer", padding: "1px 6px" }}>logout</button>
                 </div>
-              : <a href={`${serverUrl}/auth/login`} style={{ fontFamily: "monospace", fontSize: 11, padding: "3px 10px", border: "1px solid var(--border,#333)", borderRadius: 4, color: "var(--text,#ccc)", textDecoration: "none", background: "transparent" }}>login ↗</a>
+              : <a href={`${serverUrl.replace(/\/$/, "")}/auth/login`} title="Login no GitHub via BFF" style={{ fontFamily: "monospace", fontSize: 11, padding: "3px 10px", border: "1px solid var(--border,#333)", borderRadius: 4, color: "var(--text,#ccc)", textDecoration: "none", background: "transparent" }}>login ↗</a>
           )}
           <div className={`ca-mode ca-mode-${state.posture}`}><span className="ca-mode-dot" /><span className="ca-mode-label">{state.label}</span></div>
         </div>
