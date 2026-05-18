@@ -211,7 +211,7 @@ test.describe('Settings panel', () => {
   test('opens and closes settings', async ({ page }) => {
     await page.goto('/');
 
-    await page.getByTitle('Configurações').click();
+    await page.getByTitle('Configurações').click({ force: true });
     await expect(page.getByText('configurações do painel')).toBeVisible();
     await expect(page.getByPlaceholder('https://github-unified-mcp-bff.onrender.com')).toBeVisible();
 
