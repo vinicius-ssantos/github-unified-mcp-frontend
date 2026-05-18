@@ -273,6 +273,8 @@ VITE_MCP_URL=https://<github-unified-mcp-bff>.onrender.com
 
 Do not put MCP, GitHub, or Vercel tokens in frontend environment variables. Production credentials belong in the BFF. The browser-side settings panel does not persist bearer or Vercel tokens.
 
+For a Vercel frontend talking to a Render BFF, authenticated calls must use browser cookies across origins. The frontend sends `credentials: include` for BFF session, audit, logout and tool-call requests, and sends `X-CSRF-Token` when the BFF exposes a `csrf_token` cookie. Configure the BFF with matching `ALLOWED_ORIGINS`, `FRONTEND_URL`, and production cookies such as `SameSite=None; Secure`.
+
 Live tool execution should use the BFF structured endpoint:
 
 ```http
