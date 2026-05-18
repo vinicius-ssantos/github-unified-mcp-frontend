@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { callBffTool } from '../adapters/bffClient';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
