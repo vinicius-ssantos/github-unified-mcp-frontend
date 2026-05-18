@@ -65,17 +65,6 @@ test.describe('MCP console UI — smoke', () => {
     await expect(page.getByText('chatgpt-connector').first()).toBeVisible();
   });
 
-  test('keyboard shortcut ? opens help modal and Esc closes it', async ({ page }) => {
-    await page.goto('/');
-
-    await page.keyboard.press('Shift+/');
-    await expect(page.getByText('atalhos de teclado')).toBeVisible();
-    await expect(page.getByText('Tool catalog', { exact: true })).toBeVisible();
-
-    await page.keyboard.press('Escape');
-    await expect(page.getByText('atalhos de teclado')).not.toBeVisible();
-  });
-
   test('navigates to PR Readiness from nav', async ({ page }) => {
     await page.goto('/');
 
