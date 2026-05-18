@@ -97,20 +97,8 @@ export default function VercelDeployTab({ serverUrl, bearerToken = '' }: Props) 
 
   useEffect(() => () => stopPolling(), [stopPolling]);
 
-  const callTool = async <T = unknown>(name: string, args: Record<string, unknown>): Promise<T> => {
-    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-    if (bearerToken) headers['Authorization'] = `Bearer ${bearerToken}`;
-    const resp = await fetch(`${serverUrl}/mcp`, {
-      method: 'POST', headers,
-      body: JSON.stringify({ jsonrpc: '2.0', id: Date.now(), method: 'tools/call', params: { name, arguments: args } }),
-      signal: AbortSignal.timeout(12000),
-    });
-    if (!resp.ok) throw new Error(`HTTP ${resp.status} ${resp.statusText}`);
-    const data = await resp.json();
-    if (data.error) throw new Error(`MCP ${data.error.code}: ${data.error.message}`);
-    const raw = data?.result?.content?.[0]?.text;
-    return (raw ? JSON.parse(raw) : data.result) as T;
-  };
+  const callTool = async <T = unknown>(name: string, args: Record<string, unknown>): Promise<T> =>
+    callBffTool<T>(serverUrl, name, args, { bearerToken, timeoutMs: 12000 });
 
   const handleValidate = async () => {
     setError(null); setStep('validating');
