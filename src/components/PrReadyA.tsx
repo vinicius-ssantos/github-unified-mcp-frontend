@@ -67,12 +67,14 @@ export default function PrReadyA({ serverUrl, bearerToken = "" }: Props) {
       const num = parseInt(prNum, 10);
       const args = { owner, repo };
       const [pr, risk, changedFiles, runsData] = await Promise.all([
-        callTool("pr_get", { ...args, pull_number: num }),
-        callTool("pr_risk_review", { ...args, pull_number: num }),
-        callTool("pr_list_changed_files", { ...args, pull_number: num }),
-        callTool("actions_list_runs", { ...args, per_page: 6 }),
+        callTool<PrData>("pr_get", { ...args, pull_number: num }),
+        callTool<RiskData>("pr_risk_review", { ...args, pull_number: num }),
+        callTool<FileData[] | { files: FileData[] }>("pr_list_changed_files", { ...args, pull_number: num }),
+        callTool<RunData[] | { workflow_runs: RunData[] }>("actions_list_runs", { ...args, per_page: 6 }),
       ]);
-      setResult({ pr, risk, files: changedFiles.files ?? changedFiles, runs: runsData.workflow_runs ?? runsData });
+      const files = Array.isArray(changedFiles) ? changedFiles : changedFiles.files;
+      const runs = Array.isArray(runsData) ? runsData : runsData.workflow_runs;
+      setResult({ pr, risk, files, runs });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erro desconhecido");
     }
