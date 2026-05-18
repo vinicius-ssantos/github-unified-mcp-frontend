@@ -103,8 +103,7 @@ test.describe('Tool drawer', () => {
   test('opens drawer on tool row click and shows guard chain', async ({ page }) => {
     await page.goto('/');
 
-    await page.keyboard.press('g');
-    await page.keyboard.press('t');
+    await page.getByRole('button', { name: /Tool catalog/ }).click();
 
     // Click on server_info tool row
     await page.locator('.ca-tools-row', { hasText: 'server_info' }).first().click();
@@ -125,8 +124,7 @@ test.describe('Tool drawer', () => {
   test('drawer has Playground button for low-risk tools', async ({ page }) => {
     await page.goto('/');
 
-    await page.keyboard.press('g');
-    await page.keyboard.press('t');
+    await page.getByRole('button', { name: /Tool catalog/ }).click();
 
     await page.locator('.ca-tools-row', { hasText: 'server_info' }).first().click();
 
@@ -136,8 +134,7 @@ test.describe('Tool drawer', () => {
   test('drawer closes on Escape key', async ({ page }) => {
     await page.goto('/');
 
-    await page.keyboard.press('g');
-    await page.keyboard.press('t');
+    await page.getByRole('button', { name: /Tool catalog/ }).click();
 
     await page.locator('.ca-tools-row', { hasText: 'server_info' }).first().click();
     await expect(page.getByText('guard chain')).toBeVisible();
@@ -151,8 +148,7 @@ test.describe('Security posture tab', () => {
   test('shows 10 security layers', async ({ page }) => {
     await page.goto('/');
 
-    await page.keyboard.press('g');
-    await page.keyboard.press('s');
+    await page.getByRole('button', { name: /Security posture/ }).click();
 
     await expect(page.getByText('Camadas de segurança')).toBeVisible();
     await expect(page.getByText('10 camadas independentes')).toBeVisible();
@@ -166,8 +162,7 @@ test.describe('Runbook tab', () => {
   test('shows runbook picker and checklist steps', async ({ page }) => {
     await page.goto('/');
 
-    await page.keyboard.press('g');
-    await page.keyboard.press('r');
+    await page.getByRole('button', { name: /Runbook/ }).click();
 
     await expect(page.getByText(/Runbook · pr_merge/)).toBeVisible();
     await expect(page.getByText('rollback de ref')).toBeVisible();
@@ -180,8 +175,7 @@ test.describe('Runbook tab', () => {
   test('checkmark toggles on step click', async ({ page }) => {
     await page.goto('/');
 
-    await page.keyboard.press('g');
-    await page.keyboard.press('r');
+    await page.getByRole('button', { name: /Runbook/ }).click();
 
     const firstStep = page.locator('.ca-runbook-step').first();
     await expect(firstStep).not.toHaveClass(/is-done/);
@@ -194,8 +188,7 @@ test.describe('.env wizard tab', () => {
   test('shows mode indicator and output', async ({ page }) => {
     await page.goto('/');
 
-    await page.keyboard.press('g');
-    await page.keyboard.press('e');
+    await page.getByRole('button', { name: /.env wizard/ }).click();
 
     await expect(page.getByText('modo resultante')).toBeVisible();
     await expect(page.locator('.ca-wiz-mode-value')).toContainText('Read-only');
