@@ -95,7 +95,7 @@ export function App() {
       <button
         onClick={() => { setDraft(settings); setSettingsOpen(true); }}
         title="Configurações"
-        style={{ position: 'fixed', bottom: 16, right: 16, zIndex: 900, background: 'var(--surface-2,#1e1e1e)', border: '1px solid var(--border,#333)', borderRadius: 6, color: 'var(--text,#ccc)', padding: '6px 12px', cursor: 'pointer', fontFamily: 'monospace', fontSize: 12 }}
+        style={{ position: 'fixed', bottom: 16, right: 16, zIndex: 5000, background: 'var(--surface-2,#1e1e1e)', border: '1px solid var(--border,#333)', borderRadius: 6, color: 'var(--text,#ccc)', padding: '6px 12px', cursor: 'pointer', fontFamily: 'monospace', fontSize: 12 }}
       >⚙ settings</button>
 
       {settingsOpen && (
