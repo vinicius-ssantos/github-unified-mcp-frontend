@@ -7,7 +7,18 @@ export type BffCallOptions = {
   bearerToken?: string;
 };
 
-function getCsrfToken(): string {
+export type BffUserSession = {
+  user: string;
+  name?: string | null;
+  role?: string | null;
+};
+
+export type BffAuditResponse<TEvent = unknown> = {
+  total?: number;
+  events?: TEvent[];
+};
+
+export function getCsrfToken(): string {
   if (typeof document === 'undefined') return '';
   const match = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]*)/);
   return match ? decodeURIComponent(match[1]) : '';
@@ -47,13 +58,57 @@ export function parseMcpResult<T = unknown>(payload: JsonRpcEnvelope): T {
   return payload.result as T;
 }
 
+function bffBase(serverUrl: string): string {
+  return serverUrl.replace(/\/$/, '');
+}
+
+function csrfHeaders(): Record<string, string> {
+  const csrf = getCsrfToken();
+  return csrf ? { 'X-CSRF-Token': csrf } : {};
+}
+
+export async function fetchBffSession(serverUrl: string, timeoutMs = 3000): Promise<BffUserSession | null> {
+  const resp = await fetch(`${bffBase(serverUrl)}/auth/me`, {
+    credentials: 'include',
+    headers: { Accept: 'application/json' },
+    signal: AbortSignal.timeout(timeoutMs),
+  });
+  if (resp.status === 401) return null;
+  if (!resp.ok) throw new Error(`${errorLabel(resp.status)} (${resp.status}): ${await parseError(resp)}`);
+  return (await resp.json()) as BffUserSession;
+}
+
+export async function logoutBffSession(serverUrl: string, timeoutMs = 5000): Promise<void> {
+  const resp = await fetch(`${bffBase(serverUrl)}/auth/logout`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { Accept: 'application/json', ...csrfHeaders() },
+    signal: AbortSignal.timeout(timeoutMs),
+  });
+  if (!resp.ok && resp.status !== 401) {
+    throw new Error(`${errorLabel(resp.status)} (${resp.status}): ${await parseError(resp)}`);
+  }
+}
+
+export async function fetchBffAudit<TEvent = unknown>(serverUrl: string, limit = 100, timeoutMs = 5000): Promise<BffAuditResponse<TEvent>> {
+  const url = new URL(`${bffBase(serverUrl)}/api/audit`);
+  url.searchParams.set('limit', String(limit));
+  const resp = await fetch(url.toString(), {
+    credentials: 'include',
+    headers: { Accept: 'application/json' },
+    signal: AbortSignal.timeout(timeoutMs),
+  });
+  if (!resp.ok) throw new Error(`${errorLabel(resp.status)} (${resp.status}): ${await parseError(resp)}`);
+  return (await resp.json()) as BffAuditResponse<TEvent>;
+}
+
 export async function callBffTool<T = unknown>(
   serverUrl: string,
   name: string,
   args: Record<string, unknown> = {},
   options: BffCallOptions = {},
 ): Promise<T> {
-  const base = serverUrl.replace(/\/$/, '');
+  const base = bffBase(serverUrl);
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     Accept: 'application/json',
@@ -63,8 +118,7 @@ export async function callBffTool<T = unknown>(
   const token = options.bearerToken?.trim();
   if (token) headers.Authorization = `Bearer ${token}`;
 
-  const csrf = getCsrfToken();
-  if (csrf) headers['X-CSRF-Token'] = csrf;
+  Object.assign(headers, csrfHeaders());
 
   const resp = await fetch(`${base}/api/mcp/call`, {
     method: 'POST',
