@@ -68,7 +68,7 @@ test.describe('MCP console UI — smoke', () => {
   test('keyboard shortcut ? opens help modal and Esc closes it', async ({ page }) => {
     await page.goto('/');
 
-    await page.keyboard.press('?');
+    await page.keyboard.press('Shift+/');
     await expect(page.getByText('atalhos de teclado')).toBeVisible();
     await expect(page.getByText('Tool catalog', { exact: true })).toBeVisible();
 
