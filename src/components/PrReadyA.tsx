@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { callBffTool } from '../adapters/bffClient';
 import StatusDot from './StatusDot';
 
 type PrData = { number: number; title: string; state: string; draft: boolean; mergeable: boolean; mergeable_state: string; head_sha: string; base: string; head_branch: string; additions: number; deletions: number; changed_files: number };
@@ -50,20 +51,8 @@ export default function PrReadyA({ serverUrl, bearerToken = "" }: Props) {
   const [result, setResult] = useState<ResultData | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const callTool = async (name: string, args: Record<string, unknown>) => {
-    const authHeaders: Record<string, string> = bearerToken ? { "Authorization": `Bearer ${bearerToken}` } : {};
-    const resp = await fetch(`${serverUrl}/mcp`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", ...authHeaders },
-      body: JSON.stringify({ jsonrpc: "2.0", id: Date.now(), method: "tools/call", params: { name, arguments: args } }),
-      signal: AbortSignal.timeout(8000),
-    });
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-    const data = await resp.json();
-    if (data.error) throw new Error(data.error.message);
-    const raw = data?.result?.content?.[0]?.text;
-    return raw ? JSON.parse(raw) : data.result;
-  };
+  const callTool = async <T = unknown>(name: string, args: Record<string, unknown>) =>
+    callBffTool<T>(serverUrl, name, args, { bearerToken, timeoutMs: 8000 });
 
   const handleAnalyze = async () => {
     if (loading) return;
@@ -78,12 +67,14 @@ export default function PrReadyA({ serverUrl, bearerToken = "" }: Props) {
       const num = parseInt(prNum, 10);
       const args = { owner, repo };
       const [pr, risk, changedFiles, runsData] = await Promise.all([
-        callTool("pr_get", { ...args, pull_number: num }),
-        callTool("pr_risk_review", { ...args, pull_number: num }),
-        callTool("pr_list_changed_files", { ...args, pull_number: num }),
-        callTool("actions_list_runs", { ...args, per_page: 6 }),
+        callTool<PrData>("pr_get", { ...args, pull_number: num }),
+        callTool<RiskData>("pr_risk_review", { ...args, pull_number: num }),
+        callTool<FileData[] | { files: FileData[] }>("pr_list_changed_files", { ...args, pull_number: num }),
+        callTool<RunData[] | { workflow_runs: RunData[] }>("actions_list_runs", { ...args, per_page: 6 }),
       ]);
-      setResult({ pr, risk, files: changedFiles.files ?? changedFiles, runs: runsData.workflow_runs ?? runsData });
+      const files = Array.isArray(changedFiles) ? changedFiles : changedFiles.files;
+      const runs = Array.isArray(runsData) ? runsData : runsData.workflow_runs;
+      setResult({ pr, risk, files, runs });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erro desconhecido");
     }
