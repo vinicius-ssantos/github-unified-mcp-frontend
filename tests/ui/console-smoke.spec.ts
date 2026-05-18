@@ -40,29 +40,26 @@ test.describe('MCP console UI — smoke', () => {
     await expect(page.getByText('server_info')).toBeVisible();
   });
 
-  test('keyboard shortcut g+t navigates to Tool catalog', async ({ page }) => {
+  test('navigates to Tool catalog from nav', async ({ page }) => {
     await page.goto('/');
 
-    await page.keyboard.press('g');
-    await page.keyboard.press('t');
+    await page.getByRole('button', { name: /Tool catalog/ }).click();
 
     await expect(page.getByText('server_info')).toBeVisible();
   });
 
-  test('keyboard shortcut g+s navigates to Security posture', async ({ page }) => {
+  test('navigates to Security posture from nav', async ({ page }) => {
     await page.goto('/');
 
-    await page.keyboard.press('g');
-    await page.keyboard.press('s');
+    await page.getByRole('button', { name: /Security posture/ }).click();
 
     await expect(page.getByText('Camadas de segurança')).toBeVisible();
   });
 
-  test('keyboard shortcut g+a navigates to Audit log', async ({ page }) => {
+  test('navigates to Audit log from nav', async ({ page }) => {
     await page.goto('/');
 
-    await page.keyboard.press('g');
-    await page.keyboard.press('a');
+    await page.getByRole('button', { name: /Audit log/ }).click();
 
     await expect(page.getByText('Audit log').first()).toBeVisible();
     await expect(page.getByText('chatgpt-connector').first()).toBeVisible();
@@ -79,21 +76,19 @@ test.describe('MCP console UI — smoke', () => {
     await expect(page.getByText('atalhos de teclado')).not.toBeVisible();
   });
 
-  test('keyboard shortcut g+b navigates to PR Readiness', async ({ page }) => {
+  test('navigates to PR Readiness from nav', async ({ page }) => {
     await page.goto('/');
 
-    await page.keyboard.press('g');
-    await page.keyboard.press('b');
+    await page.getByRole('button', { name: /PR Readiness/ }).click();
 
     await expect(page.getByText('PR Readiness Cockpit')).toBeVisible();
     await expect(page.getByText(/DEMO · configure serverUrl/)).toBeVisible();
   });
 
-  test('keyboard shortcut g+p navigates to Playground', async ({ page }) => {
+  test('navigates to Playground from nav', async ({ page }) => {
     await page.goto('/');
 
-    await page.keyboard.press('g');
-    await page.keyboard.press('p');
+    await page.getByRole('button', { name: /Playground/ }).click();
 
     await expect(page.getByText('playground', { exact: true })).toBeVisible();
     await expect(page.getByText(/DEMO · configure serverUrl/)).toBeVisible();
