@@ -1,6 +1,6 @@
+import { callBffTool } from './bffClient';
 import type { ConsoleAdapter, ConsoleSnapshot, ServerInfo, ToolSummary } from '../types/mcp';
 
-type McpResponse<T> = { result?: { content?: Array<{ type: string; text?: string }> } | T; error?: unknown };
 type LiveAdapterOptions = { token?: string };
 
 const inferRisk = (name: string): ToolSummary['risk'] => {
@@ -19,32 +19,7 @@ const phaseFor = (name: string): string => {
 };
 
 async function mcpCall<T>(baseUrl: string, name: string, args: Record<string, unknown>, options?: LiveAdapterOptions): Promise<T> {
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    Accept: 'application/json',
-  };
-  const token = options?.token?.trim();
-  if (token) headers.Authorization = `Bearer ${token}`;
-
-  const res = await fetch(`${baseUrl}/mcp`, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name, arguments: args } }),
-  });
-  if (!res.ok) {
-    let details = '';
-    try {
-      const errorPayload = (await res.json()) as { error?: string; reason?: string; message?: string };
-      details = errorPayload.reason || errorPayload.message || errorPayload.error || '';
-    } catch {
-      details = '';
-    }
-    throw new Error(`MCP request failed: ${res.status}${details ? ` (${details})` : ''}`);
-  }
-  const payload = (await res.json()) as McpResponse<T>;
-  if (payload.error) throw new Error(String(payload.error));
-  const text = Array.isArray((payload.result as any)?.content) ? (payload.result as any).content[0]?.text : undefined;
-  return (text ? JSON.parse(text) : payload.result) as T;
+  return callBffTool<T>(baseUrl, name, args, { bearerToken: options?.token });
 }
 
 export function createLiveMcpAdapter(serverUrl: string, options?: LiveAdapterOptions): ConsoleAdapter {
