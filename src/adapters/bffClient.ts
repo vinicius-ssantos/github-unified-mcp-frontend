@@ -1,4 +1,4 @@
-import type { BffUser } from '../types/mcp';
+import type { BffCapabilities, BffUser } from '../types/mcp';
 
 type JsonRpcContent = { type?: string; text?: string };
 type JsonRpcResult = { content?: JsonRpcContent[] } | unknown;
@@ -72,6 +72,21 @@ export async function fetchBffSession(serverUrl: string, timeoutMs = 3000): Prom
   if (resp.status === 401) return null;
   if (!resp.ok) throw new Error(`${errorLabel(resp.status)} (${resp.status}): ${await parseError(resp)}`);
   return (await resp.json()) as BffUser;
+}
+
+export async function fetchBffCapabilities(serverUrl: string, timeoutMs = 3000): Promise<BffCapabilities> {
+  const resp = await fetch(`${bffBase(serverUrl)}/api/capabilities`, {
+    credentials: 'include',
+    headers: { Accept: 'application/json' },
+    signal: AbortSignal.timeout(timeoutMs),
+  });
+  if (resp.status === 401) {
+    return { authenticated: false, role: 'anonymous', user: null, tools: [] };
+  }
+  if (!resp.ok) {
+    throw new Error(`${errorLabel(resp.status)} (${resp.status}): ${await parseError(resp)}`);
+  }
+  return (await resp.json()) as BffCapabilities;
 }
 
 export async function logoutBffSession(serverUrl: string, timeoutMs = 5000): Promise<void> {
