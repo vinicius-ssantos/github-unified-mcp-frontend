@@ -10,10 +10,12 @@ type BffRouteOptions = {
   userBody?: unknown;
   auditStatus?: number;
   auditBody?: unknown;
+  capabilitiesStatus?: number;
+  capabilitiesBody?: unknown;
 };
 
 async function configureBffMode(page: Page, options: BffRouteOptions = {}) {
-  const seen: { mcpCalls: Request[] } = { mcpCalls: [] };
+  const seen: { mcpCalls: Request[]; capabilitiesCalls: Request[] } = { mcpCalls: [], capabilitiesCalls: [] };
 
   await page.addInitScript(({ storageKey, bffUrl }) => {
     localStorage.setItem(storageKey, JSON.stringify({
@@ -41,6 +43,20 @@ async function configureBffMode(page: Page, options: BffRouteOptions = {}) {
       status: options.userStatus ?? 200,
       contentType: 'application/json',
       body: JSON.stringify(options.userBody ?? { user: 'vinicius-ssantos', role: 'admin' }),
+    });
+  });
+
+  await page.route(`${BFF_URL}/api/capabilities`, async route => {
+    seen.capabilitiesCalls.push(route.request());
+    await route.fulfill({
+      status: options.capabilitiesStatus ?? 200,
+      contentType: 'application/json',
+      body: JSON.stringify(options.capabilitiesBody ?? {
+        authenticated: true,
+        role: 'admin',
+        user: { user: 'vinicius-ssantos', name: 'Vinicius', role: 'admin' },
+        tools: [{ name: 'server_info', risk_level: 'low', min_role: 'viewer', read_only: true }],
+      }),
     });
   });
 
@@ -92,6 +108,16 @@ async function openPlayground(page: Page) {
 }
 
 test.describe('BFF production contract', () => {
+  test('loads BFF capabilities with credentials when available', async ({ page }) => {
+    const seen = await configureBffMode(page);
+
+    await page.goto('/');
+
+    await expect.poll(() => seen.capabilitiesCalls.length).toBeGreaterThanOrEqual(1);
+    expect(seen.capabilitiesCalls[0].url()).toBe(`${BFF_URL}/api/capabilities`);
+    expect(seen.capabilitiesCalls[0].method()).toBe('GET');
+  });
+
   test('executes server_info through structured /api/mcp/call with CSRF header', async ({ page }) => {
     const seen = await configureBffMode(page);
 
@@ -147,6 +173,8 @@ test.describe('BFF production contract', () => {
     await configureBffMode(page, {
       userStatus: 401,
       userBody: { detail: 'login required' },
+      capabilitiesStatus: 401,
+      capabilitiesBody: { detail: 'login required' },
     });
 
     await page.goto('/');
