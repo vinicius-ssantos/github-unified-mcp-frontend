@@ -284,7 +284,7 @@ Content-Type: application/json
 { "name": "server_info", "arguments": {} }
 ```
 
-The raw `/mcp` JSON-RPC endpoint is reserved for dev/debug or lower-level runtime methods until the BFF capabilities/tool-policy contract is complete.
+The raw `/mcp` JSON-RPC endpoint is reserved for dev/debug or lower-level runtime methods until the BFF capabilities/tool-policy contract is complete. Production UI flows should prefer the structured BFF contract above.
 
 ## Build
 
