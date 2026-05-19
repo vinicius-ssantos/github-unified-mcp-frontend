@@ -4,6 +4,8 @@ const BFF_URL = 'https://bff.test';
 const STORAGE_KEY = 'mcp-panel-settings';
 
 type BffRouteOptions = {
+  healthStatus?: number;
+  healthBody?: unknown;
   mcpStatus?: number;
   mcpBody?: unknown;
   userStatus?: number;
@@ -32,9 +34,9 @@ async function configureBffMode(page: Page, options: BffRouteOptions = {}) {
 
   await page.route(`${BFF_URL}/healthz`, async route => {
     await route.fulfill({
-      status: 200,
+      status: options.healthStatus ?? 200,
       contentType: 'application/json',
-      body: JSON.stringify({ ok: true, service: 'github-unified-mcp-bff' }),
+      body: JSON.stringify(options.healthBody ?? { ok: true, service: 'github-unified-mcp-bff' }),
     });
   });
 
@@ -116,6 +118,21 @@ test.describe('BFF production contract', () => {
     await expect.poll(() => seen.capabilitiesCalls.length).toBeGreaterThanOrEqual(1);
     expect(seen.capabilitiesCalls[0].url()).toBe(`${BFF_URL}/api/capabilities`);
     expect(seen.capabilitiesCalls[0].method()).toBe('GET');
+  });
+
+  test('shows degraded runtime and blocks live execution when healthz fails', async ({ page }) => {
+    const seen = await configureBffMode(page, {
+      healthStatus: 503,
+      healthBody: { ok: false, service: 'github-unified-mcp-bff' },
+    });
+
+    await openPlayground(page);
+
+    await expect(page.getByText(/DEGRADED · BFF indisponível/)).toBeVisible();
+    await expect(page.getByText(`DEGRADED · ${BFF_URL}`)).toBeVisible();
+    await expect(page.getByText(/BFF em estado degradado/)).toBeVisible();
+    await expect(page.getByRole('button', { name: /executar/ })).toBeDisabled();
+    expect(seen.mcpCalls.some(call => call.postDataJSON()?.name !== 'server_info')).toBe(false);
   });
 
   test('blocks tools marked blocked by BFF policy before execution', async ({ page }) => {
