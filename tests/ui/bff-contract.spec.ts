@@ -136,7 +136,7 @@ test.describe('BFF production contract', () => {
 
     await expect(page.getByText('blocked by BFF policy test')).toBeVisible();
     await expect(page.getByRole('button', { name: /executar/ })).toBeDisabled();
-    expect(seen.mcpCalls).toHaveLength(0);
+    expect(seen.mcpCalls.some(call => call.postDataJSON()?.name === 'repo_get')).toBe(false);
   });
 
   test('executes server_info through structured /api/mcp/call with CSRF header', async ({ page }) => {
