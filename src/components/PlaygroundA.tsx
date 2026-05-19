@@ -2,8 +2,9 @@ import { useState, useMemo, useEffect } from 'react';
 import { TOOL_CATALOG } from '../data/tools';
 import { getSchema } from '../data/schemas';
 import { callBffTool } from '../adapters/bffClient';
+import type { BffToolPolicy } from '../types/mcp';
 
-type Props = { serverUrl: string; mode?: string; initialTool?: string | null; bearerToken?: string; bffRole?: string };
+type Props = { serverUrl: string; mode?: string; initialTool?: string | null; bearerToken?: string; bffRole?: string; bffPolicyByTool?: Record<string, BffToolPolicy> };
 
 type HistoryEntry = { ts: string; tool: string; risk: string; ok: boolean; demo?: boolean; error?: string; ms?: number };
 
@@ -76,7 +77,7 @@ function syntaxHighlight(json: string): string {
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export default function PlaygroundA({ serverUrl, initialTool, mode = 'read_only', bearerToken = "", bffRole }: Props) {
+export default function PlaygroundA({ serverUrl, initialTool, mode = 'read_only', bearerToken = "", bffRole, bffPolicyByTool = {} }: Props) {
 
   const allTools = useMemo(() =>
     TOOL_CATALOG.flatMap(p => p.tools.map(t => ({ ...t, phase: p.phase }))).filter(t => !t.planned),
