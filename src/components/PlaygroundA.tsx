@@ -129,11 +129,14 @@ export default function PlaygroundA({ serverUrl, initialTool, mode = 'read_only'
   const schema      = useMemo(() => getSchema(selectedTool), [selectedTool]);
   const isDemo      = !serverUrl;
   const activeTool  = allTools.find(t => t.name === selectedTool);
-  const risk        = activeTool?.risk ?? 'low';
+  const selectedPolicy = bffPolicyByTool[selectedTool];
+  const policyBlocked = !isDemo && !!selectedPolicy && (selectedPolicy.blocked || selectedPolicy.unknown);
+  const risk        = selectedPolicy?.risk_level ?? activeTool?.risk ?? 'low';
 
   const canExecute = (() => {
     if (!activeTool) return false;
     if (isDemo) return true;
+    if (policyBlocked) return false;
     if (risk === 'low') return true;
     if (risk === 'medium') return mode !== 'read_only';
     if (risk === 'high') return mode === 'operator' && confirmed;
@@ -142,6 +145,7 @@ export default function PlaygroundA({ serverUrl, initialTool, mode = 'read_only'
 
   const blockedReason = (() => {
     if (isDemo) return null;
+    if (policyBlocked) return selectedPolicy?.reason || (selectedPolicy?.unknown ? 'Tool desconhecida pela policy do BFF e bloqueada em produção.' : 'Tool bloqueada pela policy do BFF.');
     if (risk === 'medium' && mode === 'read_only') return 'Esta tool faz mutações. Mude a postura para write_safe ou operator nas Settings.';
     if (risk === 'high' && mode !== 'operator') return 'Esta tool é destrutiva e exige modo operator + ENABLE_DANGEROUS_TOOLS=true no servidor.';
     if (risk === 'high' && !confirmed) return null;
