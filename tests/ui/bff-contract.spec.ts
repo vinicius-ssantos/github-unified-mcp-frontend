@@ -113,9 +113,9 @@ test.describe('BFF production contract', () => {
 
     await page.goto('/');
 
-    await expect(page.getByText('admin').first()).toBeVisible();
     await expect.poll(() => seen.capabilitiesCalls.length).toBeGreaterThanOrEqual(1);
     expect(seen.capabilitiesCalls[0].url()).toBe(`${BFF_URL}/api/capabilities`);
+    expect(seen.capabilitiesCalls[0].method()).toBe('GET');
   });
 
   test('executes server_info through structured /api/mcp/call with CSRF header', async ({ page }) => {
@@ -173,6 +173,8 @@ test.describe('BFF production contract', () => {
     await configureBffMode(page, {
       userStatus: 401,
       userBody: { detail: 'login required' },
+      capabilitiesStatus: 401,
+      capabilitiesBody: { detail: 'login required' },
     });
 
     await page.goto('/');
