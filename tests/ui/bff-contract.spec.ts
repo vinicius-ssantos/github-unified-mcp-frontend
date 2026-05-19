@@ -101,12 +101,12 @@ async function configureBffMode(page: Page, options: BffRouteOptions = {}) {
   return seen;
 }
 
-async function openPlayground(page: Page) {
+async function openPlayground(page: Page, expectedRuntime: 'bff-live' | 'degraded' = 'bff-live') {
   await page.goto('/');
   await expect(page.getByText('github-unified-mcp', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: /Playground/ }).click();
   await expect(page.getByText('playground', { exact: true })).toBeVisible();
-  await expect(page.getByText(`LIVE · ${BFF_URL}`)).toBeVisible();
+  await expect(page.getByText(`${expectedRuntime === 'degraded' ? 'DEGRADED' : 'BFF LIVE'} · ${BFF_URL}`)).toBeVisible();
 }
 
 test.describe('BFF production contract', () => {
@@ -126,7 +126,7 @@ test.describe('BFF production contract', () => {
       healthBody: { ok: false, service: 'github-unified-mcp-bff' },
     });
 
-    await openPlayground(page);
+    await openPlayground(page, 'degraded');
 
     await expect(page.getByText(/DEGRADED · BFF indisponível/)).toBeVisible();
     await expect(page.getByText(`DEGRADED · ${BFF_URL}`)).toBeVisible();
