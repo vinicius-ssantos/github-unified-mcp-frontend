@@ -107,10 +107,34 @@ export type BffAuditEvent = {
   duration_ms: number;
 };
 
+export type BffRole = 'anonymous' | 'viewer' | 'operator' | 'admin';
+
 export type BffUser = {
   user: string;
   name: string;
-  role: 'viewer' | 'operator' | 'admin';
+  role: Exclude<BffRole, 'anonymous'>;
+};
+
+export type BffToolPolicy = {
+  name: string;
+  risk_level?: RiskLevel;
+  min_role?: BffRole;
+  read_only?: boolean;
+  requires_confirmation?: boolean;
+  requires_ci_gate?: boolean;
+  requires_dangerous_tools?: boolean;
+  unknown?: boolean;
+  blocked?: boolean;
+  reason?: string;
+};
+
+export type BffCapabilities = {
+  authenticated?: boolean;
+  role?: BffRole;
+  user?: BffUser | null;
+  tools?: BffToolPolicy[];
+  degraded?: boolean;
+  reason?: string;
 };
 
 export type ToolSummary = {
