@@ -98,7 +98,8 @@ test.describe('BFF production contract', () => {
     await openPlayground(page);
     await page.getByRole('button', { name: /executar/ }).click();
 
-    await expect(page.getByText('github-unified-mcp')).toBeVisible();
+    await expect(page.getByText('"server"')).toBeVisible();
+    await expect(page.getByText('"github-unified-mcp"')).toBeVisible();
     await expect.poll(() => seen.mcpCalls.length).toBe(1);
 
     const request = seen.mcpCalls[0];
