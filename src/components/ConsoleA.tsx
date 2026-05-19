@@ -5,7 +5,7 @@ import EnvWizard from './EnvWizard';
 import PlaygroundA from './PlaygroundA';
 import PrReadyA from './PrReadyA';
 import VercelDeployTab from './VercelDeployTab';
-import { callBffTool, fetchBffAudit, fetchBffSession, getCsrfToken, logoutBffSession } from '../adapters/bffClient';
+import { callBffTool, fetchBffAudit, fetchBffCapabilities, fetchBffSession, getCsrfToken, logoutBffSession } from '../adapters/bffClient';
 import { TOOL_CATALOG } from '../data/tools';
 import { SERVER_STATES, ENV_CONFIG, AUDIT_EVENTS, RATE_LIMITS } from '../data/serverState';
 import type { ToolFlatEntry, DriftInfo, ServerInfoFlags, HealthzResponse, BffAuditEvent, BffUser } from '../types/mcp';
@@ -768,9 +768,14 @@ export default function ConsoleA({ mode = "read_only", density = "compact", forc
     };
     const fetchUser = async () => {
       try {
-        const session = await fetchBffSession(serverUrl, 3000);
-        if (!cancelled) setBffUser(session);
-      } catch { if (!cancelled) setBffUser(null); }
+        const capabilities = await fetchBffCapabilities(serverUrl, 3000);
+        if (!cancelled) setBffUser(capabilities.user ?? null);
+      } catch {
+        try {
+          const session = await fetchBffSession(serverUrl, 3000);
+          if (!cancelled) setBffUser(session);
+        } catch { if (!cancelled) setBffUser(null); }
+      }
     };
     fetchAudit();
     fetchUser();
