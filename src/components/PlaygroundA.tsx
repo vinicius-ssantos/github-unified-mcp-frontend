@@ -293,7 +293,9 @@ export default function PlaygroundA({ serverUrl, initialTool, mode = 'read_only'
                   style={t.risk !== 'low' ? { opacity: mode === 'read_only' && t.risk === 'medium' ? 0.55 : 1 } : {}}
                 >
                   <span className="mono ca-pg-tool-name" style={{ flex: 1, textAlign: 'left' }}>{t.name}</span>
-                  {t.risk !== 'low' && <RiskBadge risk={t.risk} />}
+                  {bffPolicyByTool[t.name]?.blocked && <span className="mono" style={{ color: 'var(--danger,#ef5350)', fontSize: 10 }}>blocked</span>}
+                  {bffPolicyByTool[t.name]?.unknown && <span className="mono" style={{ color: 'var(--danger,#ef5350)', fontSize: 10 }}>unknown</span>}
+                  {t.risk !== 'low' && <RiskBadge risk={bffPolicyByTool[t.name]?.risk_level ?? t.risk} />}
                 </button>
               ))}
             </div>
@@ -334,6 +336,8 @@ export default function PlaygroundA({ serverUrl, initialTool, mode = 'read_only'
             <div className="ca-pg-form-h mono" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               {selectedTool}
               <RiskBadge risk={risk} />
+              {selectedPolicy?.min_role && <span className="mono" style={{ fontSize: 10, color: 'var(--text-muted,#888)' }}>min_role · {selectedPolicy.min_role}</span>}
+              {selectedPolicy?.requires_confirmation && <span className="mono" style={{ fontSize: 10, color: 'var(--warn,#f0b429)' }}>requires confirmation</span>}
             </div>
             {schema.inputs.length === 0
               ? <div className="ca-pg-no-inputs mono">— sem parâmetros —</div>
