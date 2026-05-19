@@ -2,8 +2,9 @@ import { useState, useMemo, useEffect } from 'react';
 import { TOOL_CATALOG } from '../data/tools';
 import { getSchema } from '../data/schemas';
 import { callBffTool } from '../adapters/bffClient';
+import type { BffToolPolicy } from '../types/mcp';
 
-type Props = { serverUrl: string; mode?: string; initialTool?: string | null; bearerToken?: string; bffRole?: string };
+type Props = { serverUrl: string; mode?: string; initialTool?: string | null; bearerToken?: string; bffRole?: string; bffPolicyByTool?: Record<string, BffToolPolicy> };
 
 type HistoryEntry = { ts: string; tool: string; risk: string; ok: boolean; demo?: boolean; error?: string; ms?: number };
 
@@ -76,7 +77,7 @@ function syntaxHighlight(json: string): string {
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export default function PlaygroundA({ serverUrl, initialTool, mode = 'read_only', bearerToken = "", bffRole }: Props) {
+export default function PlaygroundA({ serverUrl, initialTool, mode = 'read_only', bearerToken = "", bffRole, bffPolicyByTool = {} }: Props) {
 
   const allTools = useMemo(() =>
     TOOL_CATALOG.flatMap(p => p.tools.map(t => ({ ...t, phase: p.phase }))).filter(t => !t.planned),
@@ -128,11 +129,14 @@ export default function PlaygroundA({ serverUrl, initialTool, mode = 'read_only'
   const schema      = useMemo(() => getSchema(selectedTool), [selectedTool]);
   const isDemo      = !serverUrl;
   const activeTool  = allTools.find(t => t.name === selectedTool);
-  const risk        = activeTool?.risk ?? 'low';
+  const selectedPolicy = bffPolicyByTool[selectedTool];
+  const policyBlocked = !isDemo && !!selectedPolicy && (selectedPolicy.blocked || selectedPolicy.unknown);
+  const risk        = selectedPolicy?.risk_level ?? activeTool?.risk ?? 'low';
 
   const canExecute = (() => {
     if (!activeTool) return false;
     if (isDemo) return true;
+    if (policyBlocked) return false;
     if (risk === 'low') return true;
     if (risk === 'medium') return mode !== 'read_only';
     if (risk === 'high') return mode === 'operator' && confirmed;
@@ -141,6 +145,7 @@ export default function PlaygroundA({ serverUrl, initialTool, mode = 'read_only'
 
   const blockedReason = (() => {
     if (isDemo) return null;
+    if (policyBlocked) return selectedPolicy?.reason || (selectedPolicy?.unknown ? 'Tool desconhecida pela policy do BFF e bloqueada em produção.' : 'Tool bloqueada pela policy do BFF.');
     if (risk === 'medium' && mode === 'read_only') return 'Esta tool faz mutações. Mude a postura para write_safe ou operator nas Settings.';
     if (risk === 'high' && mode !== 'operator') return 'Esta tool é destrutiva e exige modo operator + ENABLE_DANGEROUS_TOOLS=true no servidor.';
     if (risk === 'high' && !confirmed) return null;
@@ -288,7 +293,9 @@ export default function PlaygroundA({ serverUrl, initialTool, mode = 'read_only'
                   style={t.risk !== 'low' ? { opacity: mode === 'read_only' && t.risk === 'medium' ? 0.55 : 1 } : {}}
                 >
                   <span className="mono ca-pg-tool-name" style={{ flex: 1, textAlign: 'left' }}>{t.name}</span>
-                  {t.risk !== 'low' && <RiskBadge risk={t.risk} />}
+                  {bffPolicyByTool[t.name]?.blocked && <span className="mono" style={{ color: 'var(--danger,#ef5350)', fontSize: 10 }}>blocked</span>}
+                  {bffPolicyByTool[t.name]?.unknown && <span className="mono" style={{ color: 'var(--danger,#ef5350)', fontSize: 10 }}>unknown</span>}
+                  {t.risk !== 'low' && <RiskBadge risk={bffPolicyByTool[t.name]?.risk_level ?? t.risk} />}
                 </button>
               ))}
             </div>
@@ -329,6 +336,8 @@ export default function PlaygroundA({ serverUrl, initialTool, mode = 'read_only'
             <div className="ca-pg-form-h mono" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               {selectedTool}
               <RiskBadge risk={risk} />
+              {selectedPolicy?.min_role && <span className="mono" style={{ fontSize: 10, color: 'var(--text-muted,#888)' }}>min_role · {selectedPolicy.min_role}</span>}
+              {selectedPolicy?.requires_confirmation && <span className="mono" style={{ fontSize: 10, color: 'var(--warn,#f0b429)' }}>requires confirmation</span>}
             </div>
             {schema.inputs.length === 0
               ? <div className="ca-pg-no-inputs mono">— sem parâmetros —</div>

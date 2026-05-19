@@ -118,6 +118,27 @@ test.describe('BFF production contract', () => {
     expect(seen.capabilitiesCalls[0].method()).toBe('GET');
   });
 
+  test('blocks tools marked blocked by BFF policy before execution', async ({ page }) => {
+    const seen = await configureBffMode(page, {
+      capabilitiesBody: {
+        authenticated: true,
+        role: 'admin',
+        user: { user: 'vinicius-ssantos', name: 'Vinicius', role: 'admin' },
+        tools: [
+          { name: 'server_info', risk_level: 'low', min_role: 'viewer', read_only: true },
+          { name: 'repo_get', risk_level: 'low', min_role: 'viewer', read_only: true, blocked: true, reason: 'blocked by BFF policy test' },
+        ],
+      },
+    });
+
+    await openPlayground(page);
+    await page.getByRole('button', { name: /^repo_get/ }).click();
+
+    await expect(page.getByText('blocked by BFF policy test')).toBeVisible();
+    await expect(page.getByRole('button', { name: /executar/ })).toBeDisabled();
+    expect(seen.mcpCalls.some(call => call.postDataJSON()?.name === 'repo_get')).toBe(false);
+  });
+
   test('executes server_info through structured /api/mcp/call with CSRF header', async ({ page }) => {
     const seen = await configureBffMode(page);
 

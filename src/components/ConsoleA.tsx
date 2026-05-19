@@ -8,7 +8,7 @@ import VercelDeployTab from './VercelDeployTab';
 import { callBffTool, fetchBffAudit, fetchBffCapabilities, fetchBffSession, getCsrfToken, logoutBffSession } from '../adapters/bffClient';
 import { TOOL_CATALOG } from '../data/tools';
 import { SERVER_STATES, ENV_CONFIG, AUDIT_EVENTS, RATE_LIMITS } from '../data/serverState';
-import type { ToolFlatEntry, DriftInfo, ServerInfoFlags, HealthzResponse, BffAuditEvent, BffUser } from '../types/mcp';
+import type { ToolFlatEntry, DriftInfo, ServerInfoFlags, HealthzResponse, BffAuditEvent, BffCapabilities, BffToolPolicy, BffUser } from '../types/mcp';
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -710,6 +710,7 @@ export default function ConsoleA({ mode = "read_only", density = "compact", forc
   const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
   const [liveAudit, setLiveAudit] = useState<BffAuditEvent[] | null>(null);
   const [bffUser, setBffUser] = useState<BffUser | null>(null);
+  const [bffCapabilities, setBffCapabilities] = useState<BffCapabilities | null>(null);
   const [healthLatencyMs, setHealthLatencyMs] = useState<number | null>(null);
   const [reconnecting, setReconnecting] = useState(false);
   const isDemo = !serverUrl || fetchError || liveHealth === null;
@@ -758,7 +759,7 @@ export default function ConsoleA({ mode = "read_only", density = "compact", forc
   }, [serverUrl, bearerToken]);
 
   useEffect(() => {
-    if (!serverUrl) { setLiveAudit(null); setBffUser(null); return; }
+    if (!serverUrl) { setLiveAudit(null); setBffUser(null); setBffCapabilities(null); return; }
     let cancelled = false;
     const fetchAudit = async () => {
       try {
@@ -769,12 +770,15 @@ export default function ConsoleA({ mode = "read_only", density = "compact", forc
     const fetchUser = async () => {
       try {
         const capabilities = await fetchBffCapabilities(serverUrl, 3000);
-        if (!cancelled) setBffUser(capabilities.user ?? null);
+        if (!cancelled) {
+          setBffCapabilities(capabilities);
+          setBffUser(capabilities.user ?? null);
+        }
       } catch {
         try {
           const session = await fetchBffSession(serverUrl, 3000);
           if (!cancelled) setBffUser(session);
-        } catch { if (!cancelled) setBffUser(null); }
+        } catch { if (!cancelled) { setBffUser(null); setBffCapabilities(null); } }
       }
     };
     fetchAudit();
@@ -826,6 +830,14 @@ export default function ConsoleA({ mode = "read_only", density = "compact", forc
   }, [openTool, showHelp, showPalette]);
 
   const allTools = useMemo(() => TOOL_CATALOG.flatMap(p => p.tools.map(t => ({ ...t, phase: p.phase }))), []);
+
+  const bffPolicyByTool = useMemo(() => {
+    const entries = bffCapabilities?.tools ?? [];
+    return entries.reduce<Record<string, BffToolPolicy>>((acc, policy) => {
+      acc[policy.name] = policy;
+      return acc;
+    }, {});
+  }, [bffCapabilities]);
 
   const drift = useMemo((): DriftInfo | null => {
     const catalogNames = new Set(allTools.map(t => t.name));
@@ -934,7 +946,7 @@ export default function ConsoleA({ mode = "read_only", density = "compact", forc
         {tab === "audit" && <AuditA rowPad={rowPad} cellFs={cellFs} liveEvents={liveAudit} isLive={!!serverUrl && liveAudit !== null} />}
         {tab === "runbook" && <RunbookA state={state} />}
         {tab === "wizard" && <EnvWizard />}
-        {tab === "playground" && <PlaygroundA serverUrl={serverUrl} mode={effectiveMode} initialTool={playgroundTool} bearerToken={bearerToken} bffRole={bffUser?.role} />}
+        {tab === "playground" && <PlaygroundA serverUrl={serverUrl} mode={effectiveMode} initialTool={playgroundTool} bearerToken={bearerToken} bffRole={bffUser?.role} bffPolicyByTool={bffPolicyByTool} />}
         {tab === "pr" && <PrReadyA serverUrl={serverUrl} mode={mode} bearerToken={bearerToken} />}
         {tab === "vercel" && <VercelDeployTab serverUrl={serverUrl} bearerToken={vercelToken || bearerToken} />}
       </div>
