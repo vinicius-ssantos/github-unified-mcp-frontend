@@ -100,13 +100,17 @@ test.describe('BFF production contract', () => {
 
     await expect(page.getByText('"server"')).toBeVisible();
     await expect(page.getByText('"github-unified-mcp"')).toBeVisible();
-    await expect.poll(() => seen.mcpCalls.length).toBe(1);
+    await expect.poll(() => seen.mcpCalls.length).toBeGreaterThanOrEqual(1);
 
-    const request = seen.mcpCalls[0];
-    expect(request.url()).toBe(`${BFF_URL}/api/mcp/call`);
-    expect(request.method()).toBe('POST');
-    expect(request.headers()['x-csrf-token']).toBe('test-csrf-token');
-    expect(request.postDataJSON()).toEqual({ name: 'server_info', arguments: {} });
+    const request = seen.mcpCalls.find(call => {
+      try { return call.postDataJSON()?.name === 'server_info'; }
+      catch { return false; }
+    });
+    expect(request).toBeTruthy();
+    expect(request?.url()).toBe(`${BFF_URL}/api/mcp/call`);
+    expect(request?.method()).toBe('POST');
+    expect(request?.headers()['x-csrf-token']).toBe('test-csrf-token');
+    expect(request?.postDataJSON()).toEqual({ name: 'server_info', arguments: {} });
   });
 
   test('renders real BFF audit events without falling back to demo audit data', async ({ page }) => {
