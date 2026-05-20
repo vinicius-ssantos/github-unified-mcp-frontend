@@ -403,7 +403,16 @@ export default function PlaygroundA({ serverUrl, initialTool, mode = 'read_only'
             {/* Tab content */}
             {resultTab === 'result' && (
               <>
-                {callError && <div className="ca-pg-error mono">{callError}</div>}
+                {callError && (
+                  <div className="ca-pg-error mono">
+                    <div>{callError}</div>
+                    {loginRequired && loginUrl && (
+                      <a href={loginUrl} style={{ display: 'inline-block', marginTop: 8, color: 'var(--text,#ccc)', textDecoration: 'underline' }}>
+                        login no BFF ↗
+                      </a>
+                    )}
+                  </div>
+                )}
                 {resultDisplay && (
                   <pre
                     className="ca-pg-pre mono"
