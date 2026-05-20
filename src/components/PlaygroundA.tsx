@@ -251,6 +251,9 @@ export default function PlaygroundA({ serverUrl, initialTool, mode = 'read_only'
     [selectedTool, argsForSnippet]
   );
 
+  const loginRequired = !!callError && (callError.includes('401') || callError.toLowerCase().includes('login required') || callError.toLowerCase().includes('unauthorized'));
+  const loginUrl = serverUrl ? `${serverUrl.replace(/\/$/, '')}/auth/login` : '';
+
   const curlSnippet = useMemo(() => {
     const url = serverUrl || 'https://your-mcp-server/mcp';
     const body = JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: selectedTool, arguments: argsForSnippet } });
@@ -400,7 +403,16 @@ export default function PlaygroundA({ serverUrl, initialTool, mode = 'read_only'
             {/* Tab content */}
             {resultTab === 'result' && (
               <>
-                {callError && <div className="ca-pg-error mono">{callError}</div>}
+                {callError && (
+                  <div className="ca-pg-error mono">
+                    <div>{callError}</div>
+                    {loginRequired && loginUrl && (
+                      <a href={loginUrl} style={{ display: 'inline-block', marginTop: 8, color: 'var(--text,#ccc)', textDecoration: 'underline' }}>
+                        login no BFF ↗
+                      </a>
+                    )}
+                  </div>
+                )}
                 {resultDisplay && (
                   <pre
                     className="ca-pg-pre mono"
