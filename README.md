@@ -286,6 +286,56 @@ Content-Type: application/json
 
 The raw `/mcp` JSON-RPC endpoint is reserved for dev/debug or lower-level runtime methods until the BFF capabilities/tool-policy contract is complete. Production UI flows should prefer the structured BFF contract above for authenticated tool calls.
 
+### Production runtime modes
+
+The UI must make runtime state explicit so operators never confuse mock data with production BFF data:
+
+| Mode | Meaning | Expected behavior |
+|---|---|---|
+| `DEMO` | No `serverUrl` configured | Uses local fixtures/mock data and labels them as demo data. |
+| `CONNECTING · BFF` | BFF URL configured and health check in progress | Shows pending live state without pretending data is real. |
+| `BFF LIVE` | BFF health and production contract are available | Uses structured BFF endpoints such as `/api/capabilities`, `/api/mcp/call`, and `/api/audit`. |
+| `DEGRADED` | BFF URL configured but health/audit/tool contract failed | Blocks live execution and prevents silent fallback to local mock data. |
+
+In production, a configured BFF failure must be represented as `DEGRADED`, not as `DEMO`.
+
+### Vercel frontend + Render BFF checklist
+
+For a production split deployment:
+
+```text
+https://<frontend>.vercel.app
+  -> https://<github-unified-mcp-bff>.onrender.com
+```
+
+Frontend environment:
+
+```bash
+VITE_RUNTIME_MODE=production
+VITE_MCP_URL=https://<github-unified-mcp-bff>.onrender.com
+```
+
+BFF environment/config expectations:
+
+```bash
+ALLOWED_ORIGINS=https://<frontend>.vercel.app
+FRONTEND_URL=https://<frontend>.vercel.app
+```
+
+Production cookies must be cross-site capable when the frontend and BFF are on different domains:
+
+```text
+SameSite=None; Secure
+```
+
+Operational rules:
+
+- Browser code must not store MCP, GitHub, Vercel, or destructive confirmation tokens.
+- Authenticated BFF calls must use `credentials: include`.
+- Mutating/authenticated BFF calls should send `X-CSRF-Token` when the `csrf_token` cookie is present.
+- Unknown or blocked tools from BFF policy must not execute from the browser.
+- Audit mock data may appear only in explicit `DEMO` mode.
+
 ## Build
 
 ```bash
