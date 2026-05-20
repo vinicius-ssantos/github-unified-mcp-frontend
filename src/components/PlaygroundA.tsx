@@ -251,6 +251,9 @@ export default function PlaygroundA({ serverUrl, initialTool, mode = 'read_only'
     [selectedTool, argsForSnippet]
   );
 
+  const loginRequired = !!callError && (callError.includes('401') || callError.toLowerCase().includes('login required') || callError.toLowerCase().includes('unauthorized'));
+  const loginUrl = serverUrl ? `${serverUrl.replace(/\/$/, '')}/auth/login` : '';
+
   const curlSnippet = useMemo(() => {
     const url = serverUrl || 'https://your-mcp-server/mcp';
     const body = JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: selectedTool, arguments: argsForSnippet } });
