@@ -188,6 +188,21 @@ test.describe('BFF production contract', () => {
     await expect(page.getByText('chatgpt-connector').first()).not.toBeVisible();
   });
 
+  test('blocks mock audit fallback when BFF audit is unavailable', async ({ page }) => {
+    await configureBffMode(page, {
+      auditStatus: 503,
+      auditBody: { detail: 'audit unavailable' },
+    });
+
+    await page.goto('/');
+    await page.getByRole('button', { name: /Audit log/ }).click();
+
+    await expect(page.getByText('BFF indisponível · mock bloqueado')).toBeVisible();
+    await expect(page.getByText(/Audit real indisponível/)).toBeVisible();
+    await expect(page.getByText(/audit unavailable/)).toBeVisible();
+    await expect(page.getByText('chatgpt-connector').first()).not.toBeVisible();
+  });
+
   for (const { status, label } of [
     { status: 403, label: 'role/policy denied' },
     { status: 429, label: 'rate limit exceeded' },
