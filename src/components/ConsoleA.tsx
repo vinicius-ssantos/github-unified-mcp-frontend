@@ -713,7 +713,8 @@ export default function ConsoleA({ mode = "read_only", density = "compact", forc
   const [bffCapabilities, setBffCapabilities] = useState<BffCapabilities | null>(null);
   const [healthLatencyMs, setHealthLatencyMs] = useState<number | null>(null);
   const [reconnecting, setReconnecting] = useState(false);
-  const isDemo = !serverUrl || fetchError || liveHealth === null;
+  const runtimeMode = !serverUrl ? 'demo' : fetchError ? 'degraded' : liveHealth ? 'bff-live' : 'connecting';
+  const isDemo = runtimeMode === 'demo';
 
   useEffect(() => {
     if (!serverUrl) { setLiveHealth(null); setLiveInfo(null); setFetchError(false); return; }
@@ -879,19 +880,21 @@ export default function ConsoleA({ mode = "read_only", density = "compact", forc
       <header className="ca-topbar">
         <div className="ca-brand"><div className="ca-brand-mark">◢◣</div><div className="ca-brand-text"><div className="ca-brand-name">github-unified-mcp</div><div className="ca-brand-sub">painel de operador · console</div></div></div>
         <div className="ca-topbar-mid">
-          {isDemo && !forceError && <div className="ca-topbar-pill ca-topbar-demo"><span className="mono">DEMO</span><span className="ca-demo-sep">·</span><span className="ca-demo-hint">{serverUrl ? "erro ao conectar" : "sem URL configurada"}</span></div>}
-          {!isDemo && liveHealth && <div className="ca-topbar-pill ca-topbar-live"><StatusDot tone="ok" /><span className="mono">LIVE{liveInfo ? " · flags reais" : ""}</span></div>}
+          {runtimeMode === 'demo' && !forceError && <div className="ca-topbar-pill ca-topbar-demo"><span className="mono">DEMO</span><span className="ca-demo-sep">·</span><span className="ca-demo-hint">sem URL configurada</span></div>}
+          {runtimeMode === 'connecting' && <div className="ca-topbar-pill"><StatusDot tone="warn" /><span className="mono">CONNECTING · BFF</span></div>}
+          {runtimeMode === 'degraded' && <div className="ca-topbar-pill" style={{ borderColor: 'rgba(230,110,100,.35)', color: 'var(--danger)' }}><StatusDot tone="danger" /><span className="mono">DEGRADED · BFF indisponível</span></div>}
+          {runtimeMode === 'bff-live' && liveHealth && <div className="ca-topbar-pill ca-topbar-live"><StatusDot tone="ok" /><span className="mono">BFF LIVE{liveInfo ? " · flags reais" : ""}</span></div>}
           <div className="ca-topbar-pill"><StatusDot tone={state.healthz.ok ? "ok" : "danger"} /><span className="mono">healthz · {state.healthz.ok ? "200 OK" : "503 FAIL"}</span></div>
           <div className="ca-topbar-pill"><span className="ca-pill-k">commit</span><span className="mono">{state.healthz.commit_sha}</span></div>
           <div className="ca-topbar-pill"><span className="ca-pill-k">schema</span><span className="mono">{state.healthz.tool_schema_version}</span></div>
           <div className="ca-topbar-pill"><span className="ca-pill-k">uptime</span><LiveUptime baseSeconds={state.healthz.uptime_seconds} stopped={forceError} /></div>
-          {lastRefreshed && !isDemo && (
+          {lastRefreshed && runtimeMode === 'bff-live' && (
             <div className="ca-topbar-pill" style={{ opacity: 0.6 }}>
               <span className="ca-pill-k">sync</span>
               <span className="mono">{lastRefreshed.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
             </div>
           )}
-          {healthLatencyMs !== null && !isDemo && (
+          {healthLatencyMs !== null && runtimeMode === 'bff-live' && (
             <div className="ca-topbar-pill" style={{ gap: 4 }}>
               <span className="ca-pill-k">ping</span>
               <span className="mono" style={{ color: healthLatencyMs < 300 ? "var(--ok)" : healthLatencyMs < 1000 ? "var(--warn)" : "var(--danger)" }}>{healthLatencyMs}ms</span>
@@ -946,7 +949,7 @@ export default function ConsoleA({ mode = "read_only", density = "compact", forc
         {tab === "audit" && <AuditA rowPad={rowPad} cellFs={cellFs} liveEvents={liveAudit} isLive={!!serverUrl && liveAudit !== null} />}
         {tab === "runbook" && <RunbookA state={state} />}
         {tab === "wizard" && <EnvWizard />}
-        {tab === "playground" && <PlaygroundA serverUrl={serverUrl} mode={effectiveMode} initialTool={playgroundTool} bearerToken={bearerToken} bffRole={bffUser?.role} bffPolicyByTool={bffPolicyByTool} />}
+        {tab === "playground" && <PlaygroundA serverUrl={serverUrl} mode={effectiveMode} initialTool={playgroundTool} bearerToken={bearerToken} bffRole={bffUser?.role} bffPolicyByTool={bffPolicyByTool} runtimeMode={runtimeMode} />}
         {tab === "pr" && <PrReadyA serverUrl={serverUrl} mode={mode} bearerToken={bearerToken} />}
         {tab === "vercel" && <VercelDeployTab serverUrl={serverUrl} bearerToken={vercelToken || bearerToken} />}
       </div>

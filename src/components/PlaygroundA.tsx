@@ -4,7 +4,9 @@ import { getSchema } from '../data/schemas';
 import { callBffTool } from '../adapters/bffClient';
 import type { BffToolPolicy } from '../types/mcp';
 
-type Props = { serverUrl: string; mode?: string; initialTool?: string | null; bearerToken?: string; bffRole?: string; bffPolicyByTool?: Record<string, BffToolPolicy> };
+type RuntimeMode = 'demo' | 'connecting' | 'bff-live' | 'degraded';
+
+type Props = { serverUrl: string; mode?: string; initialTool?: string | null; bearerToken?: string; bffRole?: string; bffPolicyByTool?: Record<string, BffToolPolicy>; runtimeMode?: RuntimeMode };
 
 type HistoryEntry = { ts: string; tool: string; risk: string; ok: boolean; demo?: boolean; error?: string; ms?: number };
 
@@ -77,7 +79,7 @@ function syntaxHighlight(json: string): string {
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export default function PlaygroundA({ serverUrl, initialTool, mode = 'read_only', bearerToken = "", bffRole, bffPolicyByTool = {} }: Props) {
+export default function PlaygroundA({ serverUrl, initialTool, mode = 'read_only', bearerToken = "", bffRole, bffPolicyByTool = {}, runtimeMode }: Props) {
 
   const allTools = useMemo(() =>
     TOOL_CATALOG.flatMap(p => p.tools.map(t => ({ ...t, phase: p.phase }))).filter(t => !t.planned),
@@ -127,7 +129,8 @@ export default function PlaygroundA({ serverUrl, initialTool, mode = 'read_only'
   useEffect(() => { setConfirmed(false); }, [selectedTool]);
 
   const schema      = useMemo(() => getSchema(selectedTool), [selectedTool]);
-  const isDemo      = !serverUrl;
+  const isDemo      = (runtimeMode ?? (!serverUrl ? 'demo' : 'bff-live')) === 'demo';
+  const isDegraded  = runtimeMode === 'degraded';
   const activeTool  = allTools.find(t => t.name === selectedTool);
   const selectedPolicy = bffPolicyByTool[selectedTool];
   const policyBlocked = !isDemo && !!selectedPolicy && (selectedPolicy.blocked || selectedPolicy.unknown);
@@ -136,6 +139,7 @@ export default function PlaygroundA({ serverUrl, initialTool, mode = 'read_only'
   const canExecute = (() => {
     if (!activeTool) return false;
     if (isDemo) return true;
+    if (isDegraded) return false;
     if (policyBlocked) return false;
     if (risk === 'low') return true;
     if (risk === 'medium') return mode !== 'read_only';
@@ -145,6 +149,7 @@ export default function PlaygroundA({ serverUrl, initialTool, mode = 'read_only'
 
   const blockedReason = (() => {
     if (isDemo) return null;
+    if (isDegraded) return 'BFF em estado degradado. Execução real bloqueada para evitar fallback silencioso ou operação sem contrato de produção.';
     if (policyBlocked) return selectedPolicy?.reason || (selectedPolicy?.unknown ? 'Tool desconhecida pela policy do BFF e bloqueada em produção.' : 'Tool bloqueada pela policy do BFF.');
     if (risk === 'medium' && mode === 'read_only') return 'Esta tool faz mutações. Mude a postura para write_safe ou operator nas Settings.';
     if (risk === 'high' && mode !== 'operator') return 'Esta tool é destrutiva e exige modo operator + ENABLE_DANGEROUS_TOOLS=true no servidor.';
@@ -267,7 +272,8 @@ export default function PlaygroundA({ serverUrl, initialTool, mode = 'read_only'
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {isDemo && <div className="ca-pg-demo-badge mono">DEMO · configure serverUrl nas Settings para chamadas reais</div>}
-          {!isDemo && <div className="ca-pg-live-badge mono">LIVE · {serverUrl}</div>}
+          {isDegraded && <div className="ca-pg-live-badge mono" style={{ color: 'var(--danger,#ef5350)', borderColor: 'rgba(230,110,100,.35)' }}>DEGRADED · {serverUrl}</div>}
+          {!isDemo && !isDegraded && <div className="ca-pg-live-badge mono">BFF LIVE · {serverUrl}</div>}
           {bffRole && (
             <div style={{ background: RISK_STYLE[bffRole === 'admin' || bffRole === 'operator' ? 'high' : 'low'].bg, border: `1px solid ${RISK_STYLE[bffRole === 'admin' || bffRole === 'operator' ? 'high' : 'low'].border}`, borderRadius: 5, padding: '3px 8px', fontFamily: 'ui-monospace, monospace', fontSize: 10, color: RISK_STYLE[bffRole === 'admin' || bffRole === 'operator' ? 'high' : 'low'].color }}>
               BFF · {bffRole}
