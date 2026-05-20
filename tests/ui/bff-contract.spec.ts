@@ -203,6 +203,21 @@ test.describe('BFF production contract', () => {
     await expect(page.getByText('chatgpt-connector').first()).not.toBeVisible();
   });
 
+  test('shows BFF login CTA when /api/mcp/call returns 401', async ({ page }) => {
+    await configureBffMode(page, {
+      mcpStatus: 401,
+      mcpBody: { detail: 'login required' },
+    });
+
+    await openPlayground(page);
+    await page.getByRole('button', { name: /executar/ }).click();
+
+    await expect(page.getByText(/login required/i)).toBeVisible();
+    const login = page.getByRole('link', { name: /login no BFF/ });
+    await expect(login).toBeVisible();
+    await expect(login).toHaveAttribute('href', `${BFF_URL}/auth/login`);
+  });
+
   for (const { status, label } of [
     { status: 403, label: 'role/policy denied' },
     { status: 429, label: 'rate limit exceeded' },
