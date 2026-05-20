@@ -369,12 +369,15 @@ function AuditTimeline({ events }: { events: { ts: string; level?: string; resul
   );
 }
 
-function AuditA({ rowPad, cellFs, liveEvents, isLive }: { rowPad: string; cellFs: number; liveEvents: BffAuditEvent[] | null; isLive: boolean }) {
+function AuditA({ rowPad, cellFs, liveEvents, runtimeMode }: { rowPad: string; cellFs: number; liveEvents: BffAuditEvent[] | null; runtimeMode: 'demo' | 'connecting' | 'bff-live' | 'degraded' }) {
   const [toolQuery, setToolQuery] = useState("");
   const [resultFilter, setResultFilter] = useState("all");
 
+  const isLive = runtimeMode === 'bff-live' && liveEvents !== null;
+  const isDemo = runtimeMode === 'demo';
+  const isUnavailable = !isDemo && !isLive;
   const events = liveEvents ?? [];
-  const mockEvents = liveEvents === null ? AUDIT_EVENTS : [];
+  const mockEvents = isDemo ? AUDIT_EVENTS : [];
 
   const filteredLive = events.filter(e => {
     if (resultFilter === "ok" && !e.result_ok) return false;
@@ -434,11 +437,18 @@ function AuditA({ rowPad, cellFs, liveEvents, isLive }: { rowPad: string; cellFs
           <span className="mono" style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 400, marginLeft: 10 }}>{filtered}/{total} eventos</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <div className="ca-audit-sub mono">{isLive ? "BFF SQLite · dados reais" : "mock local · sem persistência server-side"}</div>
-          <button onClick={() => exportEvents('json')} style={{ fontFamily: "monospace", fontSize: 10, padding: "2px 7px", border: "1px solid var(--border,#333)", borderRadius: 3, background: "transparent", color: "var(--text-dim,#888)", cursor: "pointer" }}>↓ json</button>
-          <button onClick={() => exportEvents('csv')}  style={{ fontFamily: "monospace", fontSize: 10, padding: "2px 7px", border: "1px solid var(--border,#333)", borderRadius: 3, background: "transparent", color: "var(--text-dim,#888)", cursor: "pointer" }}>↓ csv</button>
+          <div className="ca-audit-sub mono">{isLive ? "BFF SQLite · dados reais" : isDemo ? "mock local · sem persistência server-side" : "BFF indisponível · mock bloqueado"}</div>
+          <button disabled={isUnavailable} onClick={() => exportEvents('json')} style={{ fontFamily: "monospace", fontSize: 10, padding: "2px 7px", border: "1px solid var(--border,#333)", borderRadius: 3, background: "transparent", color: "var(--text-dim,#888)", cursor: isUnavailable ? "not-allowed" : "pointer", opacity: isUnavailable ? 0.45 : 1 }}>↓ json</button>
+          <button disabled={isUnavailable} onClick={() => exportEvents('csv')}  style={{ fontFamily: "monospace", fontSize: 10, padding: "2px 7px", border: "1px solid var(--border,#333)", borderRadius: 3, background: "transparent", color: "var(--text-dim,#888)", cursor: isUnavailable ? "not-allowed" : "pointer", opacity: isUnavailable ? 0.45 : 1 }}>↓ csv</button>
         </div>
       </div>
+
+      {isUnavailable && (
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 14px', marginBottom: 12, background: 'rgba(230,110,100,.1)', border: '1px solid rgba(230,110,100,.28)', borderRadius: 8, fontSize: 12, color: 'var(--danger,#ef5350)', fontFamily: 'ui-monospace, monospace' }}>
+          <span style={{ flexShrink: 0 }}>✗</span>
+          <span>Audit real indisponível em modo {runtimeMode}. Mock local bloqueado para evitar leitura operacional enganosa.</span>
+        </div>
+      )}
 
       <AuditTimeline events={allEventsForTimeline} />
 
@@ -469,7 +479,11 @@ function AuditA({ rowPad, cellFs, liveEvents, isLive }: { rowPad: string; cellFs
         {(resultFilter !== "all" || toolQuery) && <button className="ca-tools-pill" onClick={() => { setResultFilter("all"); setToolQuery(""); }}>× limpar</button>}
       </div>
 
-      {isLive ? (
+      {isUnavailable ? (
+        <div className="ca-tools-empty mono" style={{ padding: 18, border: '1px dashed rgba(230,110,100,.35)', borderRadius: 8 }}>
+          audit unavailable — BFF configurado, mas nenhum evento real foi carregado
+        </div>
+      ) : isLive ? (
         <table className="ca-audit ca-audit-full" style={{ "--row-pad": rowPad, "--cell-fs": cellFs + "px" } as React.CSSProperties}>
           <thead><tr><th>ts</th><th>user</th><th>tool</th><th>ip</th><th>result</th><th>ms</th></tr></thead>
           <tbody>
@@ -946,7 +960,7 @@ export default function ConsoleA({ mode = "read_only", density = "compact", forc
         {tab === "overview" && <OverviewA state={state} forceError={forceError} sparkData={sparkData} />}
         {tab === "tools" && <ToolsA tools={filteredTools} totals={totals} riskFilter={riskFilter} setRiskFilter={setRiskFilter} phaseFilter={phaseFilter} setPhaseFilter={setPhaseFilter} query={query} setQuery={setQuery} rowPad={rowPad} cellFs={cellFs} mode={mode} onOpen={t => setOpenTool(t.name)} searchRef={searchRef} drift={drift} />}
         {tab === "security" && <SecurityA state={state} />}
-        {tab === "audit" && <AuditA rowPad={rowPad} cellFs={cellFs} liveEvents={liveAudit} isLive={!!serverUrl && liveAudit !== null} />}
+        {tab === "audit" && <AuditA rowPad={rowPad} cellFs={cellFs} liveEvents={liveAudit} runtimeMode={runtimeMode} />}
         {tab === "runbook" && <RunbookA state={state} />}
         {tab === "wizard" && <EnvWizard />}
         {tab === "playground" && <PlaygroundA serverUrl={serverUrl} mode={effectiveMode} initialTool={playgroundTool} bearerToken={bearerToken} bffRole={bffUser?.role} bffPolicyByTool={bffPolicyByTool} runtimeMode={runtimeMode} />}
